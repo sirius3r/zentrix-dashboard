@@ -1,0 +1,109 @@
+{
+ "groups": [
+  {
+   "id": "demo-infra",
+   "name": "Infrastruktur",
+   "links": [
+    {
+     "name": "Monitoring",
+     "url": "http://192.168.10.10:8338/",
+     "icon": null
+    },
+    {
+     "name": "Controller",
+     "url": "https://192.168.10.20:8443/",
+     "icon": null
+    },
+    {
+     "name": "Backup",
+     "url": "http://192.168.10.30:20019/",
+     "icon": null
+    }
+   ]
+  },
+  {
+   "id": "demo-netzwerk",
+   "name": "Netzwerkkomponenten",
+   "links": [
+    {
+     "name": "Firewall",
+     "url": "https://192.168.20.1:444/",
+     "icon": null
+    },
+    {
+     "name": "Switch",
+     "url": "http://192.168.20.2/",
+     "icon": null
+    },
+    {
+     "name": "USV",
+     "url": "http://192.168.20.3/",
+     "icon": null
+    }
+   ]
+  },
+  {
+   "id": "demo-multimedia",
+   "name": "Multimedia",
+   "links": [
+    {
+     "name": "Medienserver",
+     "url": "http://192.168.30.10:8096/",
+     "icon": null
+    },
+    {
+     "name": "Musik",
+     "url": "http://192.168.30.11:4533/",
+     "icon": null
+    },
+    {
+     "name": "Transcoder",
+     "url": "http://192.168.30.12/",
+     "icon": null
+    }
+   ]
+  },
+  {
+   "id": "demo-smarthome",
+   "name": "Smart Home",
+   "links": [
+    {
+     "name": "Home Automation",
+     "url": "http://192.168.40.10:8123/",
+     "icon": null
+    },
+    {
+     "name": "Cloud",
+     "url": "https://cloud.example.org/",
+     "icon": null
+    },
+    {
+     "name": "Passwort-Manager",
+     "url": "https://vault.example.org/",
+     "icon": null
+    }
+   ]
+  },
+  {
+   "id": "demo-tools",
+   "name": "Tools & Sonstiges",
+   "links": [
+    {
+     "name": "Dokumentenmanagement",
+     "url": "http://192.168.50.10/",
+     "icon": null
+    },
+    {
+     "name": "KI-Oberfläche",
+     "url": "https://ki.example.org/",
+     "icon": null
+    },
+    {
+     "name": "Netzwerk-Scanner",
+     "url": "http://192.168.50.20:2911/",
+     "icon": null
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,14 @@
+# runtime/local artifacts
+token.txt
+*.token
+*.tmp
+.links-*
+__pycache__/
+*.pyc
+node_modules/
+.build/
+*.log
+
+# local production data (NEVER commit real links)
+links-prod.json
+prod-backup/

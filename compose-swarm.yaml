@@ -1,0 +1,43 @@
+# Zentrix Homelab Dashboard — Docker Swarm stack
+# Deploy:  docker stack deploy -c compose-swarm.yaml zentrix
+#
+# Reachable in the swarm via the overlay network: zentrix_dashboard:8080
+# (stack name "zentrix" + service name "dashboard")
+services:
+  dashboard:
+    image: ghcr.io/sirius3r/zentrix-dashboard:latest
+    environment:
+      ZENTRIX_DATA_FILE: /data/links.json
+    secrets:
+      - source: zentrix_token
+        target: zentrix_token
+    volumes:
+      - data:/data
+    networks:
+      - swarm-net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      placement:
+        constraints:
+          - node.role == worker
+
+networks:
+  swarm-net:
+    external: true
+
+volumes:
+  data:
+    driver: local
+    driver_opts:
+      type: none
+      device: /mnt/swarm/volumes/zentrix_data
+      o: bind
+
+secrets:
+  zentrix_token:
+    external: true

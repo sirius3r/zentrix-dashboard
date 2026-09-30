@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="de" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zentrix Homelab</title>
+<link id="favicon" rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230a0c0f'/%3E%3Cpath d='M16 12h32L16 52h32' stroke='%23e02020' stroke-width='8' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+<style>
+/* ============================================================
+   ZENTRIX HOMELAB DASHBOARD — design language: Binary (Sharp Design)
+   Dark monochrome instrument-panel. Hand-written, no frameworks.
+   ============================================================ */
+:root {
+  --topbar-bg: rgba(10, 12, 15, 0.85);
+  --backdrop-bg: rgba(5, 7, 9, 0.75);
+  --bg-0: #0a0c0f;
+  --bg-1: #101318;
+  --bg-2: #161a21;
+  --bg-3: #1d222b;
+  --line: #262c37;
+  --line-strong: #333b48;
+  --ink-1: #e8ecf1;
+  --ink-2: #9aa4b2;
+  --ink-3: #5c6673;
+  --accent: #4ee1a0;
+  --accent-dim: rgba(78, 225, 160, 0.12);
+  --warn: #ffb454;
+  --danger: #ff6b6b;
+  --mono: "JetBrains Mono", "Cascadia Code", "Fira Code", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: "Inter", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+/* ---------- themes (override :root vars via data-theme attribute) ---------- */
+html[data-theme="phosphor"] {
+  --accent: #39ff14; --accent-dim: rgba(57, 255, 20, 0.12);
+  --head-plate: transparent; --head-plate-border: transparent; --head-text: "";
+}
+html[data-theme="amber"] {
+  --accent: #ffb000; --accent-dim: rgba(255, 176, 0, 0.12);
+}
+html[data-theme="arctic"] {
+  --head-plate: rgba(255, 255, 255, 0.72);
+  --head-plate-border: rgba(20, 24, 31, 0.18);
+  --head-text: #14181f;
+  --topbar-bg: rgba(238, 241, 245, 0.85);
+  --backdrop-bg: rgba(40, 50, 62, 0.45);
+  --bg-0: #eef1f5; --bg-1: #ffffff; --bg-2: #f2f5f9; --bg-3: #e4e9f0;
+  --line: #d5dce5; --line-strong: #b9c3d0;
+  --ink-1: #1a2029; --ink-2: #4c5a6b; --ink-3: #8494a5;
+  --accent: #0a7d5c; --accent-dim: rgba(10, 125, 92, 0.12);
+}
+html[data-theme="deepspace"] {
+  --bg-0: #05060f; --bg-1: #0b0e1d; --bg-2: #10142a; --bg-3: #171c36;
+  --line: #232a4a; --line-strong: #343d68;
+  --ink-1: #e6eaf6; --ink-2: #9aa4c8; --ink-3: #5a6488;
+  --accent: #7d8cff; --accent-dim: rgba(125, 140, 255, 0.14);
+}
+html[data-theme="contrast"] {
+  --bg-0: #000000; --bg-1: #0a0a0a; --bg-2: #111111; --bg-3: #1a1a1a;
+  --line: #3a3a3a; --line-strong: #6a6a6a;
+  --ink-1: #ffffff; --ink-2: #e0e0e0; --ink-3: #a0a0a0;
+  --accent: #00e5ff; --accent-dim: rgba(0, 229, 255, 0.18);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scrollbar-color: var(--line-strong) var(--bg-0); }
+body {
+  background: var(--bg-0);
+  color: var(--ink-1);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+::selection { background: var(--accent-dim); color: var(--accent); }
+
+/* ---------- top bar ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; gap: 16px;
+  padding: 14px 28px;
+  background: var(--topbar-bg);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.wordmark {
+  font-family: var(--mono);
+  font-weight: 700; font-size: 17px; letter-spacing: 0.08em;
+  display: flex; align-items: center; gap: 10px; user-select: none;
+}
+.wordmark .dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+  animation: pulse 3s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+.wordmark em { font-style: normal; color: var(--ink-3); font-weight: 400; }
+.clock {
+  margin-left: auto;
+  font-family: var(--mono); font-size: 13px; color: var(--ink-2);
+  display: flex; align-items: center; gap: 8px;
+}
+.clock .sep { color: var(--ink-3); }
+.btn {
+  font-family: var(--mono); font-size: 12.5px;
+  padding: 7px 14px; border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong); background: transparent;
+  color: var(--ink-2); cursor: pointer; letter-spacing: 0.03em;
+  transition: all 0.15s ease;
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #06251a; font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.1); color: #06251a; }
+.btn.danger:hover { border-color: var(--danger); color: var(--danger); background: rgba(255,107,107,0.1); }
+
+/* ---------- search ---------- */
+.searchwrap { padding: 26px 28px 0; max-width: 1440px; margin: 0 auto; width: 100%; position: relative; z-index: 1; }
+.search {
+  width: 100%;
+  font-family: var(--mono); font-size: 14px;
+  padding: 13px 18px 13px 44px;
+  background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius);
+  color: var(--ink-1); outline: none; transition: border-color 0.15s;
+}
+.search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+.search::placeholder { color: var(--ink-3); }
+.searchwrap { position: relative; }
+.searchwrap .lens {
+  position: absolute; left: 44px; top: 39px; color: var(--ink-3);
+  font-size: 15px; pointer-events: none;
+}
+
+/* ---------- layout ---------- */
+.wrap { max-width: 1440px; margin: 0 auto; padding: 28px; position: relative; z-index: 1; }
+/* light theme + custom bg: white translucent plate behind headers, always dark text */
+html[data-theme="arctic"] body[data-bg="custom"] .group-head {
+  background: var(--head-plate);
+  border: 1px solid var(--head-plate-border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  backdrop-filter: blur(4px);
+}
+html[data-theme="arctic"] body[data-bg="custom"] .group-title,
+html[data-theme="arctic"] body[data-bg="custom"] .group-count {
+  color: var(--head-text) !important;
+  text-shadow: none !important;
+}
+html[data-theme="arctic"] body[data-bg="custom"] .group-head { border-bottom: 1px solid var(--head-plate-border); }
+
+/* per-header adaptive contrast (dark themes, set by JS luminance sampling) */
+.group-title.light-on-dark { color: #f2f5f9; text-shadow: 0 1px 6px rgba(0,0,0,0.65); }
+.group-title.dark-on-light { color: #14181f; text-shadow: 0 1px 5px rgba(255,255,255,0.6); }
+.group-count.light-on-dark { color: #c8cfd8; }
+.group-count.dark-on-light { color: #3d4854; }
+.group-head.light-on-dark { border-bottom-color: rgba(255,255,255,0.35); }
+.group-head.dark-on-light { border-bottom-color: rgba(20,24,31,0.35); }
+.group { margin-bottom: 42px; }
+.group-head {
+  display: flex; align-items: baseline; gap: 14px;
+  margin-bottom: 16px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.group-title {
+  font-family: var(--mono); font-size: 13px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-1);
+}
+.group-title::before { content: "// "; color: var(--accent); }
+.group-count { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); }
+.group-actions { margin-left: auto; display: none; gap: 6px; }
+body.edit-mode .group-actions { display: flex; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+  gap: 12px;
+}
+
+/* ---------- link cards ---------- */
+.card {
+  position: relative;
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 15px;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  text-decoration: none; color: var(--ink-1);
+  transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  min-width: 0;
+}
+.card:hover {
+  border-color: var(--accent);
+  background: var(--bg-2);
+  transform: translateY(-2px);
+}
+.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.card .ico {
+  width: 34px; height: 34px; flex: 0 0 34px;
+  border-radius: 8px; background: var(--bg-3);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-weight: 700; font-size: 13px;
+  color: var(--accent); overflow: hidden;
+}
+.card .ico img { width: 22px; height: 22px; object-fit: contain; }
+.card .meta { min-width: 0; }
+.card .name {
+  font-size: 14px; font-weight: 600; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.card .url {
+  font-family: var(--mono); font-size: 11px; color: var(--ink-3);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 145px;
+}
+.card .status {
+  position: absolute; top: 9px; right: 9px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--line-strong);
+}
+.card .status.up { background: var(--accent); box-shadow: 0 0 5px var(--accent); }
+.card .status.down { background: var(--danger); }
+
+/* edit mode */
+body.edit-mode .card { cursor: grab; }
+body.edit-mode .card .del-btn {
+  display: flex;
+  position: absolute; top: -8px; right: -8px; z-index: 5;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--danger); color: #fff; border: none;
+  align-items: center; justify-content: center;
+  font-size: 12px; cursor: pointer; line-height: 1;
+}
+.card .del-btn { display: none; }
+.card.dragging { opacity: 0.4; border-style: dashed; }
+.card.drag-over { border-color: var(--warn); }
+
+/* add card */
+.add-card {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 13px 15px; min-height: 62px;
+  border: 1px dashed var(--line-strong); border-radius: var(--radius);
+  color: var(--ink-3); font-family: var(--mono); font-size: 12.5px;
+  cursor: pointer; background: transparent; width: 100%;
+  transition: all 0.15s;
+}
+.add-card:hover { border-color: var(--accent); color: var(--accent); }
+body:not(.edit-mode) .add-card { display: none; }
+
+/* add group */
+.addgroup {
+  display: none;
+  padding: 20px; border: 1px dashed var(--line-strong);
+  border-radius: var(--radius); text-align: center;
+  color: var(--ink-1); font-family: var(--mono); font-size: 13px;
+  cursor: pointer; margin-bottom: 42px; width: 100%;
+  background: var(--bg-1);                 /* opaque plate — readable on any bg */
+  position: relative; z-index: 1;          /* above the canvas */
+  box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+}
+.addgroup:hover { border-color: var(--accent); color: var(--accent); }
+body.edit-mode .addgroup { display: block; }
+
+/* group title editable */
+body.edit-mode .group-title { outline: 1px dashed transparent; border-radius: 3px; padding: 2px 6px; }
+body.edit-mode .group-title:hover { outline-color: var(--accent); }
+body.edit-mode .group-title:focus { outline: 1px solid var(--accent); background: var(--bg-2); }
+.group .del-group {
+  display: none; border: none; background: transparent;
+  color: var(--ink-3); cursor: pointer; font-size: 15px; padding: 0 6px;
+}
+.group .del-group:hover { color: var(--danger); }
+body.edit-mode .group .del-group { display: inline; }
+
+/* ---------- modal ---------- */
+.modal-backdrop {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: var(--backdrop-bg); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center;
+}
+.modal-backdrop.open { display: flex; }
+.modal {
+  width: min(480px, calc(100vw - 40px));
+  background: var(--bg-1); border: 1px solid var(--line-strong);
+  border-radius: 14px; padding: 26px;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+}
+.modal h3 {
+  font-family: var(--mono); font-size: 14px; letter-spacing: 0.1em;
+  text-transform: uppercase; margin-bottom: 20px; color: var(--ink-1);
+}
+.modal h3::before { content: "> "; color: var(--accent); }
+.field { margin-bottom: 15px; }
+.field label {
+  display: block; font-family: var(--mono); font-size: 11px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 6px;
+}
+.field input, .field select {
+  width: 100%; font-family: var(--mono); font-size: 13px;
+  padding: 10px 12px; background: var(--bg-0);
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  color: var(--ink-1); outline: none;
+}
+.field input:focus { border-color: var(--accent); }
+.field .hint { font-size: 11px; color: var(--ink-3); margin-top: 4px; font-family: var(--mono); }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
+.icon-preview { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.icon-preview img { width: 28px; height: 28px; }
+.icon-results { margin-top: 8px; }
+.icon-results:not(.has-items) { display: none; }
+.icon-none {
+  font-family: var(--mono); font-size: 11.5px; color: var(--ink-3);
+  padding: 8px 2px;
+}
+.icon-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+  gap: 6px; max-height: 210px; overflow-y: auto;
+  padding: 8px; background: var(--bg-0);
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+}
+.icon-item {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 9px 4px 7px; background: var(--bg-2);
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  cursor: pointer; color: var(--ink-2); min-width: 0;
+  transition: border-color 0.12s, transform 0.12s;
+  font-family: var(--mono); font-size: 9.5px;
+}
+.icon-item:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+.icon-item img { width: 26px; height: 26px; object-fit: contain; }
+.icon-item span {
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.icon-item.broken { opacity: 0.35; cursor: not-allowed; }
+
+/* ---------- toast ---------- */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: var(--bg-3); border: 1px solid var(--accent); color: var(--ink-1);
+  font-family: var(--mono); font-size: 13px;
+  padding: 11px 20px; border-radius: var(--radius);
+  opacity: 0; transition: all 0.25s ease; z-index: 300;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* footer */
+footer {
+  position: relative; z-index: 1;
+  text-align: center; padding: 30px 20px 40px;
+  font-family: var(--mono); font-size: 11px; color: var(--ink-3);
+  border-top: 1px solid var(--line); margin-top: 20px;
+}
+footer .kbd {
+  border: 1px solid var(--line-strong); border-radius: 4px;
+  padding: 1px 6px; font-size: 10px; color: var(--ink-2);
+}
+.no-results {
+  display: none; text-align: center; padding: 60px 0;
+  font-family: var(--mono); color: var(--ink-3); font-size: 14px;
+}
+/* language selector */
+.lang-select {
+  font-family: var(--mono); font-size: 12px;
+  padding: 6px 8px; background: var(--bg-1); color: var(--ink-2);
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  cursor: pointer; outline: none; max-width: 130px;
+}
+.lang-select:hover, .lang-select:focus { border-color: var(--accent); color: var(--accent); }
+.lang-select option { background: var(--bg-1); color: var(--ink-1); }
+
+/* group drag & drop (edit mode) */
+.group-drag-handle {
+  font-size: 14px; color: var(--ink-3); cursor: grab;
+  padding: 2px 6px; user-select: none; line-height: 1;
+  display: none;
+}
+body.edit-mode .group-drag-handle { display: inline; }
+.group-drag-handle:hover { color: var(--accent); }
+.group-dragging { opacity: 0.35; }
+.group-drag-over { outline: 2px dashed var(--warn); outline-offset: 8px; border-radius: var(--radius); }
+
+/* RTL (Arabic): flip the few asymmetric bits */
+[dir="rtl"] .clock { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .group-actions { margin-left: 0; margin-right: auto; }
+[dir="rtl"] .searchwrap .lens { left: auto; right: 44px; }
+[dir="rtl"] .search { padding: 13px 44px 13px 18px; }
+[dir="rtl"] .card .url { direction: ltr; text-align: right; }
+
+@media (max-width: 640px) {
+  /* mobile: single-line topbar — wordmark shrinks, edit+gear only */
+  .topbar { padding: 10px 12px; gap: 8px; flex-wrap: nowrap; }
+  .topbar .btn { padding: 8px 10px; font-size: 11.5px; }
+  .topbar .icon-btn { padding: 8px 9px; }
+  .sync-chip { font-size: 10px; padding: 3px 8px; }
+  .wordmark { letter-spacing: 0.05em; }
+  .wordmark em { display: none; } /* "/homelab" weg — spart Platz */
+  .wrap { padding: 20px 14px; }
+  .searchwrap { padding: 18px 14px 0; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .clock { display: none; }
+  .card { padding: 12px 13px; min-height: 56px; } /* größere Touch-Targets */
+  .card .name { font-size: 13.5px; }
+  .btn { padding: 9px 13px; font-size: 12px; }
+  .modal { padding: 20px; }
+  .group { margin-bottom: 30px; }
+  .wordmark { font-size: 15px; }
+  /* Suchzeile auf Mobil dauerhaft ausgeblendet (Feature #3) */
+  .searchwrap { display: none; }
+}
+@media (max-width: 400px) {
+  .grid { grid-template-columns: 1fr 1fr; }
+  .card .url { display: none; }
+}
+/* touch devices: keine Hover-Transformation, dafür aktiver Zustand */
+@media (hover: none) {
+  .card:hover { transform: none; }
+  .card:active { background: var(--bg-2); border-color: var(--accent); }
+  .btn:active { background: var(--accent-dim); }
+}
+/* ---------- settings tabs ---------- */
+.settings-tabs {
+  display: flex; gap: 6px; margin-bottom: 18px;
+  border-bottom: 1px solid var(--line); padding-bottom: 10px;
+}
+.settings-tab {
+  font-family: var(--mono); font-size: 12px;
+  padding: 7px 12px; border-radius: var(--radius-sm);
+  border: 1px solid transparent; background: transparent;
+  color: var(--ink-2); cursor: pointer; letter-spacing: 0.04em;
+  transition: all 0.15s ease;
+}
+.settings-tab:hover { color: var(--accent); }
+.settings-tab.active {
+  background: var(--accent-dim); color: var(--accent);
+  border-color: var(--accent);
+}
+.settings-pane { display: none; }
+.settings-pane.active { display: block; }
+
+/* info pane */
+.info-row { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; }
+.info-key { font-family: var(--mono); font-size: 12px; color: var(--ink-2); }
+.info-value { font-family: var(--mono); font-size: 12px; color: var(--ink-1); }
+.info-links { display: flex; flex-direction: column; gap: 8px; }
+.info-link {
+  font-family: var(--mono); font-size: 12.5px; color: var(--accent);
+  text-decoration: none; word-break: break-all;
+  padding: 8px 10px; background: var(--bg-0);
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  transition: border-color 0.15s;
+}
+.info-link:hover { border-color: var(--accent); background: var(--accent-dim); }
+
+/* per-group side-by-side rows */
+.group-row.duo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 40px;
+  align-items: start;
+}
+@media (max-width: 1919px) {
+  /* below FullHD always stacked, regardless of pairing */
+  .group-row.duo { display: block; }
+}
+.pair-btn.active {
+  border-color: var(--accent); color: var(--accent); background: var(--accent-dim);
+}
+
+/* ---------- settings ---------- */
+.icon-btn { font-size: 16px; padding: 7px 11px; }
+.settings-modal { width: min(520px, calc(100vw - 40px)); }
+.settings-section { margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.settings-section:last-of-type { border-bottom: none; }
+.settings-label {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+}
+.settings-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.settings-field { flex: 1 1 180px; display: flex; flex-direction: column; gap: 6px; }
+.settings-field-name {
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.settings-field select {
+  width: 100%; font-family: var(--mono); font-size: 13px;
+  padding: 9px 10px; background: var(--bg-0);
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  color: var(--ink-1); outline: none;
+}
+.settings-field select:focus { border-color: var(--accent); }
+.settings-field select option { background: var(--bg-1); color: var(--ink-1); }
+#set-language {
+  width: 100%; font-family: var(--mono); font-size: 13px;
+  padding: 9px 10px; background: var(--bg-0);
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  color: var(--ink-1); outline: none;
+}
+#set-language:focus { border-color: var(--accent); }
+#set-language option { background: var(--bg-1); color: var(--ink-1); }
+.bg-upload-row { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.bg-upload-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.settings-check {
+  display: flex; align-items: center; gap: 9px; margin-top: 12px;
+  font-size: 13.5px; color: var(--ink-2); cursor: pointer; user-select: none;
+}
+.settings-check input[type="checkbox"] {
+  width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer;
+}
+.settings-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* ---------- view mode / responsive grid ---------- */
+/* compact links: hide URL line (icon + name only) */
+body.compact-links .card .url { display: none; }
+body.compact-links .card { min-height: 52px; }
+body.compact-links .card .name { font-size: 13px; }
+
+/* per-group side-by-side layout (user opt-in per group via layout toggle) */
+.grid.layout-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(215px, 1fr));
+}
+
+/* fixed columns chosen in settings (2..8) */
+body.fixed-cols #board .grid {
+  grid-template-columns: var(--grid-cols, repeat(auto-fill, minmax(215px, 1fr)));
+}
+
+/* two groups side by side ≥ FullHD (opt-in) */
+@media (min-width: 1920px) {
+  body.groups-side-by-side #board {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 40px;
+    align-items: start;
+  }
+  body.groups-side-by-side #board .group { break-inside: avoid; }
+}
+
+/* > FullHD: scale topbar with viewport, cap content width, keep ≤5 default columns */
+@media (min-width: 1920px) {
+  .topbar { padding: 14px clamp(28px, 3vw, 64px); }
+  .wrap, .searchwrap, .addgroup-wrap { max-width: min(2200px, 92vw); }
+  #board .grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+}
+
+/* topbar right alignment when clock hidden:
+   exactly ONE element after the clock gets margin-left:auto — the auto space
+   then pushes that element AND everything after it to the right edge.
+   (Multiple margin-left:auto would split the space and float the chip mid-bar.) */
+.topbar > *:last-child { margin-right: 0; }
+body.clock-hidden .topbar .clock { display: none; }
+/* element immediately after the clock pulls the rest to the right */
+body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
+/* keep the visual gap consistent when the clock is visible */
+.topbar .clock { margin-right: 4px; }
+
+/* search toggle button: hidden on wide screens (search always visible) */
+.search-toggle { display: none; }
+@media (max-width: 640px) {
+  .search-toggle { display: inline-flex; }
+  /* search hidden by default on mobile unless opened via magnifier */
+  body:not(.search-open) .searchwrap { display: none; }
+  body.search-open .searchwrap { display: block; }
+}
+
+/* icon-only edit button */
+#btn-edit { min-width: 38px; justify-content: center; }
+
+/* sync status chip */
+.sync-chip {
+  font-family: var(--mono); font-size: 11px;
+  padding: 4px 10px; border-radius: 20px;
+  border: 1px solid var(--line-strong); color: var(--ink-3);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.sync-chip.ok { border-color: rgba(78,225,160,0.4); color: var(--accent); }
+.sync-chip.err { border-color: rgba(255,107,107,0.5); color: var(--danger); }
+.sync-chip { cursor: pointer; user-select: none; transition: border-color 0.15s, color 0.15s; }
+.sync-chip:hover { border-color: var(--accent); color: var(--accent); }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas" aria-hidden="true" style="position:fixed;inset:0;z-index:0;pointer-events:none;"></canvas>
+
+<header class="topbar">
+  <div class="wordmark"><span class="dot"></span>ZENTRIX<em>/homelab</em></div>
+  <div class="clock"><span id="clock-date">—</span><span class="sep">│</span><span id="clock-time">—</span></div>
+  <span class="sync-chip" id="sync-chip" title="Speicherstatus">…</span>
+  <button class="btn icon-btn search-toggle" id="btn-search-toggle" title="Suche einblenden" aria-label="Suche">⌕</button>
+  <button class="btn icon-btn" id="btn-edit" title="Bearbeiten">✎</button>
+  <button class="btn icon-btn" id="btn-settings" title="Einstellungen öffnen" aria-haspopup="dialog">⚙</button>
+</header>
+
+<div class="searchwrap">
+  <span class="lens">⌕</span>
+  <input type="search" class="search" id="search" placeholder="Dienste durchsuchen … (Tippen zum Filtern)" autocomplete="off">
+</div>
+
+<main class="wrap" id="board"></main>
+<div class="no-results" id="no-results">keine Treffer — Suchbegriff anpassen</div>
+
+<div class="addgroup-wrap" style="max-width:1440px;margin:0 auto;padding:0 28px;position:relative;z-index:1;">
+  <button class="addgroup" id="btn-addgroup">+ Neue Tabgruppe</button>
+</div>
+
+<footer>
+  <span class="kbd">Strg</span>+<span class="kbd">K</span> Suche fokussieren ·
+  <span class="kbd">Esc</span> Suche leeren ·
+  Änderungen werden automatisch gespeichert (Server + lokale Kopie) · Zentrix Agent / Binary language
+</footer>
+
+<!-- modal -->
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3 id="modal-title">Link hinzufügen</h3>
+    <div class="field">
+      <label for="f-name">Name</label>
+      <input id="f-name" type="text" placeholder="z. B. Home Assistant">
+    </div>
+    <div class="field">
+      <label for="f-url">URL</label>
+      <input id="f-url" type="text" placeholder="http://192.168.1.10:8123">
+      <div class="hint">Protokoll wird bei Bedarf ergänzt (http:// oder https://)</div>
+    </div>
+    <div class="field">
+      <label for="f-icon">Icon <span style="text-transform:none">— Wort eingeben (z. B. „xcp-ng") oder URL</span></label>
+      <input id="f-icon" type="text" placeholder="xcp-ng oder https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/svg/…">
+      <div class="icon-preview" id="icon-preview"></div>
+      <div class="icon-results" id="icon-results"></div>
+    </div>
+    <div class="field">
+      <label for="f-group">Gruppe</label>
+      <select id="f-group"></select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="btn-cancel">Abbrechen</button>
+      <button class="btn primary" id="btn-save">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="settings-backdrop">
+  <div class="modal settings-modal" role="dialog" aria-modal="true">
+    <h3 id="settings-title">Einstellungen</h3>
+
+    <div class="settings-tabs" role="tablist">
+      <button class="settings-tab active" id="tab-appearance" type="button" role="tab">Erscheinungsbild</button>
+      <button class="settings-tab" id="tab-branding" type="button" role="tab">Branding</button>
+      <button class="settings-tab" id="tab-data" type="button" role="tab">Daten</button>
+      <button class="settings-tab" id="tab-info" type="button" role="tab">Info</button>
+    </div>
+
+    <div class="settings-pane active" id="pane-appearance">
+    <div class="settings-section">
+      <div class="settings-label" id="lbl-appearance">Erscheinungsbild</div>
+      <div class="settings-row">
+        <label class="settings-field">
+          <span class="settings-field-name" id="lbl-theme">Theme</span>
+          <select id="set-theme">
+            <option value="binary">Binary</option>
+            <option value="phosphor">Phosphor</option>
+            <option value="amber">Amber</option>
+            <option value="arctic">Arctic</option>
+            <option value="contrast">Contrast</option>
+            <option value="deepspace">Deep Space</option>
+          </select>
+        </label>
+        <label class="settings-field">
+          <span class="settings-field-name" id="lbl-background">Hintergrund</span>
+          <select id="set-background">
+            <option value="pcb">PCB</option>
+            <option value="tron">Lightcycle</option>
+            <option value="starfield">Starfield</option>
+            <option value="static">Static</option>
+            <option value="custom">Custom</option>
+          </select>
+        </label>
+      </div>
+      <div class="bg-upload-row" id="bg-upload-row" style="display:none">
+        <span class="settings-field-name" id="lbl-bg-upload">Bild hochladen</span>
+        <div class="bg-upload-actions">
+          <button class="btn" id="btn-bg-upload" type="button">Bild wählen</button>
+          <button class="btn" id="btn-bg-clear" type="button" style="display:none">Bild entfernen</button>
+          <input type="file" id="file-bg" accept="image/jpeg,image/png,image/webp" style="display:none">
+        </div>
+        <div class="hint" id="hint-bg-upload">JPG/PNG/WebP, max 4 MB</div>
+      </div>
+      <label class="settings-check">
+        <input type="checkbox" id="set-clock">
+        <span id="lbl-clock">Datum & Uhr anzeigen</span>
+      </label>
+      <label class="settings-check">
+        <input type="checkbox" id="set-compact">
+        <span id="lbl-compact">Vereinfachte Darstellung (ohne URL-Zeilen)</span>
+      </label>
+      <label class="settings-field" style="margin-top:12px">
+        <span class="settings-field-name" id="lbl-grid-columns">Link-Raster / Zwei Gruppen nebeneinander (≥ FullHD)</span>
+        <select id="set-grid-columns">
+          <option value="auto">Automatisch</option>
+          <option value="groups">Zwei Gruppen nebeneinander</option>
+          <option value="4">4 Links pro Zeile</option>
+          <option value="5">5 Links pro Zeile</option>
+          <option value="6">6 Links pro Zeile</option>
+          <option value="8">8 Links pro Zeile</option>
+        </select>
+      </label>
+      <label class="settings-check">
+        <input type="checkbox" id="set-lang-follow">
+        <span id="lbl-langfollow">Sprache automatisch (Browsersprache)</span>
+      </label>
+    </div>
+
+    </div><!-- /pane-appearance -->
+
+    <div class="settings-pane" id="pane-branding">
+    <div class="settings-section">
+      <div class="settings-label" id="lbl-branding">Branding & Akzentfarben</div>
+      <label class="settings-field">
+        <span class="settings-field-name" id="lbl-title">Topbar-Text (statt /homelab)</span>
+        <input id="set-title" type="text" maxlength="40" placeholder="homelab">
+      </label>
+      <div class="bg-upload-row">
+        <span class="settings-field-name" id="lbl-favicon">Favicon (Browsertab-Logo)</span>
+        <div class="bg-upload-actions">
+          <button class="btn" id="btn-fav-upload" type="button">Bild wählen</button>
+          <button class="btn" id="btn-fav-clear" type="button" style="display:none">Zurücksetzen</button>
+          <input type="file" id="file-favicon" accept="image/png,image/x-icon,image/svg+xml,image/jpeg,image/webp" style="display:none">
+        </div>
+        <div class="hint">PNG/ICO/SVG, max 256 KB — Standard: großes rotes Z</div>
+      </div>
+      <div class="settings-row" style="margin-top:12px">
+        <label class="settings-field">
+          <span class="settings-field-name" id="lbl-accent">Akzentfarbe (Theme)</span>
+          <input id="set-accent-color" type="color" style="width:100%;height:38px;background:var(--bg-0);border:1px solid var(--line-strong);border-radius:var(--radius-sm);cursor:pointer">
+        </label>
+        <div class="settings-actions" style="align-self:flex-end">
+          <button class="btn primary" id="set-accent-apply" type="button">Übernehmen</button>
+          <button class="btn" id="set-accent-reset" type="button">Theme-Standard</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-label" id="lbl-language">Sprache</div>
+      <select id="set-language"></select>
+    </div>
+
+    </div><!-- /pane-branding -->
+
+    <div class="settings-pane" id="pane-data">
+    <div class="settings-section">
+      <div class="settings-label" id="lbl-data">Daten</div>
+      <div class="settings-actions">
+        <button class="btn" id="btn-export">⭳ Export</button>
+        <button class="btn" id="btn-import">⭱ Import</button>
+        <button class="btn danger" id="btn-reset">⟲ Neu laden</button>
+      </div>
+      <input type="file" id="file-import" accept=".json" style="display:none">
+    </div>
+
+    </div><!-- /pane-data -->
+
+    <div class="settings-pane" id="pane-info">
+      <div class="settings-section">
+        <div class="settings-label" id="lbl-info-title">Informationen</div>
+        <div class="info-row">
+          <span class="info-key" id="info-version-key">Version</span>
+          <span class="info-value">1.7.0</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key" id="info-repo-key">GitHub-Repository</span>
+          <a class="info-link" href="https://github.com/sirius3r/zentrix-dashboard" target="_blank" rel="noopener noreferrer">github.com/sirius3r/zentrix-dashboard</a>
+        </div>
+        <div class="settings-label" id="lbl-info-manuals" style="margin-top:16px">Benutzerhandbücher</div>
+        <div class="info-links">
+          <a class="info-link" href="https://github.com/sirius3r/zentrix-dashboard/blob/main/HANDBUCH.md" target="_blank" rel="noopener noreferrer" id="info-manual-en">🇬🇧 Handbuch (Englisch)</a>
+          <a class="info-link" href="https://github.com/sirius3r/zentrix-dashboard/blob/main/docs/de/HANDBUCH.md" target="_blank" rel="noopener noreferrer" id="info-manual-de">🇩🇪 Handbuch (Deutsch)</a>
+          <a class="info-link" href="https://github.com/sirius3r/zentrix-dashboard/blob/main/docs/fr/HANDBUCH.md" target="_blank" rel="noopener noreferrer" id="info-manual-fr">🇫🇷 Handbuch (Französisch)</a>
+        </div>
+      </div>
+    </div><!-- /pane-info -->
+
+    <div class="modal-actions">
+      <button class="btn primary" id="btn-settings-close">Schließen</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="token-backdrop">
+  <div class="modal" role="dialog" aria-modal="true">
+    <h3>Server-Token</h3>
+    <div class="field">
+      <label for="f-token">Schreib-Token</label>
+      <input id="f-token" type="password" placeholder="Token vom Server (token.txt)">
+      <div class="hint">Wird nur in diesem Browser gespeichert (localStorage) und nur fürs Speichern an den Server gesendet.</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" id="btn-token-cancel">Nur offline arbeiten</button>
+      <button class="btn primary" id="btn-token-save">Merken</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/bg.js" defer></script>
+<script src="/i18n.js" defer></script>
+<script src="/app.js" defer></script>
+</body>
+</html>

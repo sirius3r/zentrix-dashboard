@@ -1,0 +1,25 @@
+# Zentrix Homelab Dashboard — Docker Standalone
+# Vorbereitung:
+#   mkdir -p /opt/zentrix/data && chown 1000:1000 /opt/zentrix/data
+#   echo -n 'DEIN-SCHREIB-TOKEN' > /opt/zentrix/zentrix_token && chmod 600 /opt/zentrix/zentrix_token
+# Start:
+#   docker compose -f compose-standalone.yaml up -d
+services:
+  dashboard:
+    image: ghcr.io/sirius3r/zentrix-dashboard:latest
+    container_name: zentrix-dashboard
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      ZENTRIX_DATA_FILE: /data/links.json
+    volumes:
+      - /opt/zentrix/data:/data
+      - /opt/zentrix/zentrix_token:/run/secrets/zentrix_token:ro
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=2).status == 200 else 1)"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    mem_limit: 128m
