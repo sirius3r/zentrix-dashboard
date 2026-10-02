@@ -6,8 +6,8 @@ animated backgrounds and WYSIWYG editing. No framework, no build tools, no
 runtime dependencies: just static files plus a small Python backend (stdlib
 only).
 
-!(https://github.com/sirius3r/zentrix-dashboard/blob/main/screenshot/screenshot1.png)
-!(https://github.com/sirius3r/zentrix-dashboard/blob/main/screenshot/screenshot2.png)
+![Dashboard](https://github.com/sirius3r/zentrix-dashboard/blob/main/screenshot/screenshot1.png)
+![Settings](https://github.com/sirius3r/zentrix-dashboard/blob/main/screenshot/screenshot2.png)
 
 ![Version](https://img.shields.io/badge/version-1.7.0-blue)
 ![Python](https://img.shields.io/badge/python-3.12-informational)
