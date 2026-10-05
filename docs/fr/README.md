@@ -40,6 +40,10 @@ docker run -d --name zentrix \
   -v zentrix_data:/data \
   ghcr.io/sirius3r/zentrix-dashboard:latest
 ```
+> **Remarque :** `-e ZENTRIX_TOKEN=…` (variable d'environnement) prime toujours
+> sur le fichier de token. Sans elle, un token aléatoire est généré au premier
+> démarrage et affiché dans les logs (`docker logs zentrix | grep -A1 token`).
+
 
 → http://localhost:8080 — au premier démarrage, le fichier de démo
 `links.json` est semé dans le volume ; le jeton d'écriture se trouve dans

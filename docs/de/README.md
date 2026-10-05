@@ -35,6 +35,10 @@ docker run -d --name zentrix \
   -v zentrix_data:/data \
   ghcr.io/sirius3r/zentrix-dashboard:latest
 ```
+> **Hinweis:** `-e ZENTRIX_TOKEN=…` (Umgebungsvariable) hat immer Vorrang
+> vor der Token-Datei. Ohne sie wird beim ersten Start ein zufälliges Token
+> erzeugt und im Log ausgegeben (`docker logs zentrix | grep -A1 token`).
+
 
 → http://localhost:8080 — beim ersten Start wird die Demodaten-`links.json`
 ins Volume befüllt; das Schreib-Token steht in den Container-Logs

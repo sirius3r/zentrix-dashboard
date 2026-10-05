@@ -43,7 +43,11 @@ docker run -d --name zentrix \
 
 → http://localhost:8080 — on first start the demo `links.json` is seeded
 into the volume; the write token is in the container logs
-(`docker logs zentrix | grep token`).
+(`docker logs zentrix | grep -A1 token`).
+
+> **Note:** `-e ZENTRIX_TOKEN=…` (env) always takes precedence over the
+> token file. Without it, a random token is generated at first start and
+> logged (`docker logs zentrix | grep -A1 token`).
 
 With your own token:
 
