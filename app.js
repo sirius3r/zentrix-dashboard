@@ -51,8 +51,8 @@ function toast(msg) {
 /* ---- settings (theme / background / clock / language) ---- */
 const SETTINGS_KEY = STORAGE_KEY + "-settings";
 const BG_IMAGE_KEY = STORAGE_KEY + "-bgimage";   /* data-URL of the custom background */
-const THEMES = ["binary", "phosphor", "amber", "arctic", "contrast", "deepspace"];
-const BGS = ["pcb", "tron", "static", "custom", "starfield"];
+const THEMES = ["binary", "phosphor", "amber", "arctic", "contrast", "deepspace", "glass"];
+const BGS = ["pcb", "tron", "static", "custom", "starfield", "immich"];
 const BG_IMAGE_MAX = 4 * 1024 * 1024;            /* 4 MB raw size limit */
 const BG_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 /* accent color per theme as raw rgb — feeds the canvas backgrounds */
@@ -67,6 +67,7 @@ const THEME_ACCENT_RGB = {
 const THEME_ACCENT_HEX = {
   "binary": "#4ee1a0", "phosphor": "#39ff14", "amber": "#ffb000",
   "arctic": "#0a7d5c", "contrast": "#00e5ff", "deepspace": "#7d8cff",
+  "glass": "#4ee1a0",
 };
 function themeAccentHex(theme) {
   return THEME_ACCENT_HEX[theme || settings.theme] || THEME_ACCENT_HEX.binary;
@@ -130,6 +131,8 @@ function applyTheme() {
     document.querySelectorAll("#board .group-head").forEach(h => h.classList.remove("light-on-dark", "dark-on-light"));
   }
   if (window.ZENTRIX_BG) window.ZENTRIX_BG.apply({ accentRgb: themeAccentRgb() });
+  /* photo backgrounds: theme change alters header base colors → re-sample contrast */
+  if (typeof window.ZENTRIX_ADAPT === "function") setTimeout(window.ZENTRIX_ADAPT, 30);
 }
 function applyBg() {
   document.body.dataset.bg = settings.bg;   /* CSS hooks (arctic header plate etc.) */
@@ -252,7 +255,7 @@ function applyI18n() {
   const lblData = $id("lbl-data"); if (lblData) lblData.textContent = t("set_data");
   const themeSel = $id("set-theme");
   if (themeSel) {
-    const themeNames = { binary: t("theme_binary"), phosphor: t("theme_phosphor"), amber: t("theme_amber"), arctic: t("theme_arctic"), contrast: t("theme_contrast"), deepspace: t("theme_deepspace") };
+    const themeNames = { binary: t("theme_binary"), phosphor: t("theme_phosphor"), amber: t("theme_amber"), arctic: t("theme_arctic"), contrast: t("theme_contrast"), deepspace: t("theme_deepspace"), glass: t("theme_glass") };
     for (const opt of themeSel.options || []) if (themeNames[opt.value]) opt.textContent = themeNames[opt.value];
   }
   const bgSel = $id("set-background");
@@ -293,13 +296,25 @@ function applyI18n() {
   const infoManualEn = $id("info-manual-en"); if (infoManualEn) infoManualEn.textContent = "🇬🇧 " + t("info_manual_en");
   const infoManualDe = $id("info-manual-de"); if (infoManualDe) infoManualDe.textContent = "🇩🇪 " + t("info_manual_de");
   const infoManualFr = $id("info-manual-fr"); if (infoManualFr) infoManualFr.textContent = "🇫🇷 " + t("info_manual_fr");
+  /* immich settings section */
+  const tabImmich = $id("tab-immich"); if (tabImmich) tabImmich.textContent = t("tab_immich");
+  const lblImmich = $id("lbl-immich"); if (lblImmich) lblImmich.textContent = t("lbl_immich");
+  const lblImmichUrl = $id("lbl-immich-url"); if (lblImmichUrl) lblImmichUrl.textContent = t("lbl_immich_url");
+  const lblImmichKey = $id("lbl-immich-key"); if (lblImmichKey) lblImmichKey.textContent = t("lbl_immich_key");
+  const lblImmichAlbum = $id("lbl-immich-album"); if (lblImmichAlbum) lblImmichAlbum.textContent = t("lbl_immich_album");
+  const lblImmichInterval = $id("lbl-immich-interval"); if (lblImmichInterval) lblImmichInterval.textContent = t("lbl_immich_interval");
+  const btnImmichTestL = $id("btn-immich-test"); if (btnImmichTestL) btnImmichTestL.textContent = t("immich_test_btn");
+  const btnImmichSaveL = $id("btn-immich-save"); if (btnImmichSaveL) btnImmichSaveL.textContent = t("immich_save_btn");
+  /* bg dropdown option label */
+  const bgSelI18n = $id("set-background");
+  if (bgSelI18n) { const o = bgSelI18n.querySelector('option[value="immich"]'); if (o) o.textContent = t("bg_immich"); }
   const setCompactChk = $id("set-compact");
   if (setCompactChk) {
     /* checkbox label text lives in the adjacent span (lbl-compact) — handled above */
   }
   const btnSettingsClose = $id("btn-settings-close"); if (btnSettingsClose) btnSettingsClose.textContent = t("btn_close");
   /* settings tabs */
-  const tabNames = { "tab-appearance": t("set_appearance"), "tab-branding": t("tab_branding_short"), "tab-data": t("set_data"), "tab-info": t("set_info") };
+  const tabNames = { "tab-appearance": t("set_appearance"), "tab-branding": t("tab_branding_short"), "tab-immich": t("tab_immich"), "tab-data": t("set_data"), "tab-info": t("set_info") };
   for (const [tid, label] of Object.entries(tabNames)) {
     const el = $id(tid); if (el) el.textContent = label;
   }
@@ -440,9 +455,10 @@ const ADAPT_SAMPLER = document.createElement("canvas");
 ADAPT_SAMPLER.width = 64; ADAPT_SAMPLER.height = 64;
 const ADAPT_SCTX = ADAPT_SAMPLER.getContext("2d", { willReadFrequently: true });
 
-function luminanceAt(px, py) {
-  /* sample a small patch around (px,py) from the custom bg image, return 0..1 */
-  const img = window.ZENTRIX_BG && window.ZENTRIX_BG.image();
+function luminanceAt(px, py, img) {
+  /* sample a small patch around (px,py) from the photo bg image, return 0..1.
+     Maps screen coords through the COVER-fit transform (scale + center-crop),
+     so the sampled spot matches what is actually visible behind the element. */
   if (!img) return null;
   const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
   if (!iw || !ih) return null;
@@ -450,8 +466,12 @@ function luminanceAt(px, py) {
     /* downscale the whole image into 64x64, then read the corresponding patch */
     ADAPT_SCTX.clearRect(0, 0, 64, 64);
     ADAPT_SCTX.drawImage(img, 0, 0, 64, 64);
-    const rx = Math.max(0, Math.min(63, Math.round((px / window.innerWidth) * 63)));
-    const ry = Math.max(0, Math.min(63, Math.round((py / window.innerHeight) * 63)));
+    const scale = Math.max(window.innerWidth / iw, window.innerHeight / ih);
+    const dispW = iw * scale, dispH = ih * scale;
+    const offX = (window.innerWidth - dispW) / 2, offY = (window.innerHeight - dispH) / 2;
+    const ix = (px - offX) / scale, iy = (py - offY) / scale;
+    const rx = Math.max(0, Math.min(63, Math.round((ix / iw) * 63)));
+    const ry = Math.max(0, Math.min(63, Math.round((iy / ih) * 63)));
     const data = ADAPT_SCTX.getImageData(Math.max(0, rx - 2), Math.max(0, ry - 2), 5, 5).data;
     let sum = 0, n = 0;
     for (let i = 0; i < data.length; i += 4) {
@@ -466,15 +486,19 @@ function luminanceAt(px, py) {
 }
 
 function adaptGroupHeaders() {
-  /* arctic theme uses the fixed white plate + dark text — no sampling needed */
-  if (document.documentElement.dataset.theme === "arctic") return;
-  if (settings.bg !== "custom" || !window.ZENTRIX_BG || !window.ZENTRIX_BG.image()) return;
+  /* arctic/glass themes use fixed plates — no per-header sampling needed */
+  const th = document.documentElement.dataset.theme;
+  if (th === "arctic" || th === "glass") return;
+  if (settings.bg !== "custom" && settings.bg !== "immich") return;
+  if (!window.ZENTRIX_BG) return;
+  const img = settings.bg === "custom" ? window.ZENTRIX_BG.image() : window.ZENTRIX_BG.immichImage();
+  if (!img) return;
   const heads = document.querySelectorAll("#board .group-head");
   for (const head of heads) {
     const title = head.querySelector(".group-title");
     if (!title) continue;
     const rect = head.getBoundingClientRect();
-    const lum = luminanceAt(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    const lum = luminanceAt(rect.left + rect.width / 2, rect.top + rect.height / 2, img);
     if (lum === null) continue;
     const light = lum < 0.55;  /* dark image region → light text */
     head.classList.toggle("light-on-dark", light);
@@ -677,7 +701,7 @@ function render(filter = "") {
   }
 
   /* adaptive header contrast over custom background — retries cover async image decode */
-  if (settings.bg === "custom") {
+  if (settings.bg === "custom" || settings.bg === "immich") {
     requestAnimationFrame(adaptGroupHeaders);
     [300, 800, 1600].forEach(ms => setTimeout(adaptGroupHeaders, ms));
   }
@@ -1105,7 +1129,88 @@ function openSettings() {
   if (accentInput) {
 accentInput.value = settings.accent[settings.theme] || themeAccentHex();
   }
+  loadImmichConfig();
   applyI18n();
+}
+
+/* ---- Immich background configuration (Branding tab) ----
+   The API key is write-only: the server never returns it, the field stays
+   empty and only shows a masked hint when a key is stored. */
+function loadImmichConfig() {
+  fetch("/api/immich/config", { headers: { "X-Auth-Token": getToken() }, credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((cfg) => {
+      const status = $("#immich-status");
+      if (!cfg) { if (status) status.textContent = ""; return; }
+      const url = $("#set-immich-url"); if (url) url.value = cfg.url || "";
+      const album = $("#set-immich-album"); if (album) album.value = cfg.album || "";
+      const iv = $("#set-immich-interval");
+      if (iv) { for (const o of iv.options) if (Number(o.value) === Number(cfg.interval)) o.selected = true; }
+      const key = $("#set-immich-key"); if (key) key.value = "";
+      const hint = $("#hint-immich-key");
+      if (hint) hint.textContent = cfg.key_set ? t("immich_key_set") + " (" + cfg.key_hint + ")" : t("immich_key_hint");
+      const priv = $("#hint-immich-privacy");
+      if (priv) priv.textContent = t("immich_privacy_hint");
+      updateImmichStatus(cfg);
+    })
+    .catch(() => {});
+}
+function updateImmichStatus(cfg) {
+  const status = $("#immich-status"); if (!status || !cfg) return;
+  if (cfg.error) status.textContent = "⚠ " + t("immich_err_" + (cfg.error === "album_not_found" ? "album" : "conn"));
+  else if (cfg.configured) status.textContent = "✓ " + t("immich_active");
+  else status.textContent = t("immich_inactive");
+}
+function saveImmichConfig() {
+  const payload = {
+    url: ($("#set-immich-url") || {}).value || "",
+    key: ($("#set-immich-key") || {}).value || "",
+    album: ($("#set-immich-album") || {}).value || "",
+    interval: Number(($("#set-immich-interval") || {}).value || 3600),
+  };
+  fetch("/api/immich/config", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", "X-Auth-Token": getToken() },
+    credentials: "same-origin",
+    body: JSON.stringify(payload),
+  })
+    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then(() => {
+      const status = $("#immich-status");
+      if (status) status.textContent = "✓ " + t("immich_saved");
+      loadImmichConfig();
+      /* switch bg to immich if not already on a photo mode */
+      if (settings.bg !== "custom" && settings.bg !== "immich") {
+        settings.bg = "immich"; saveSettings(); applyBg(); syncSettingsUi();
+      }
+    })
+    .catch(() => {
+      const status = $("#immich-status");
+      if (status) status.textContent = "⚠ " + t("immich_save_failed");
+    });
+}
+function testImmichConfig() {
+  const status = $("#immich-status");
+  if (status) status.textContent = "… " + t("immich_testing");
+  const payload = {
+    url: ($("#set-immich-url") || {}).value || "",
+    key: ($("#set-immich-key") || {}).value || "",
+    album: ($("#set-immich-album") || {}).value || "",
+  };
+  fetch("/api/immich/test", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Auth-Token": getToken() },
+    credentials: "same-origin",
+    body: JSON.stringify(payload),
+  })
+    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then((res) => {
+      if (!status) return;
+      if (res.ok) status.textContent = "✓ " + t("immich_test_ok").replace("{n}", res.photos);
+      else if (res.error === "album_not_found") status.textContent = "⚠ " + t("immich_err_album");
+      else status.textContent = "⚠ " + t("immich_err_conn");
+    })
+    .catch(() => { if (status) status.textContent = "⚠ " + t("immich_err_conn"); });
 }
 function closeSettings() { $("#settings-backdrop").classList.remove("open"); }
 $("#btn-settings").addEventListener("click", openSettings);
@@ -1113,6 +1218,7 @@ $("#btn-settings").addEventListener("click", openSettings);
 const SETTINGS_TABS = {
   appearance: { tab: "tab-appearance", pane: "pane-appearance" },
   branding:   { tab: "tab-branding",   pane: "pane-branding" },
+  immich:     { tab: "tab-immich",     pane: "pane-immich" },
   data:       { tab: "tab-data",       pane: "pane-data" },
   info:       { tab: "tab-info",       pane: "pane-info" },
 };
@@ -1274,6 +1380,12 @@ $("#set-accent-reset").addEventListener("click", () => {
   if (input) input.value = themeAccentHex();
   toast(t("accent_reset"));
 });
+
+/* ---- Immich settings handlers ---- */
+const btnImmichSave = $("#btn-immich-save");
+if (btnImmichSave) btnImmichSave.addEventListener("click", saveImmichConfig);
+const btnImmichTest = $("#btn-immich-test");
+if (btnImmichTest) btnImmichTest.addEventListener("click", testImmichConfig);
 
 /* ---- compact / columns / layout settings handlers ---- */
 $("#set-compact").addEventListener("change", (e) => {

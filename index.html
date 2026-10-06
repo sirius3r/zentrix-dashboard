@@ -56,6 +56,23 @@ html[data-theme="deepspace"] {
   --ink-1: #e6eaf6; --ink-2: #9aa4c8; --ink-3: #5a6488;
   --accent: #7d8cff; --accent-dim: rgba(125, 140, 255, 0.14);
 }
+html[data-theme="glass"] {
+  /* Halbtransparent: frosted glass over photo backgrounds — scrims on topbar,
+     group heads, cards; background photo stays clearly visible */
+  --topbar-bg: rgba(10, 12, 15, 0.45);
+  --backdrop-bg: rgba(5, 7, 9, 0.55);
+  --bg-0: rgba(10, 12, 15, 0.38);
+  --bg-1: rgba(14, 17, 22, 0.42);
+  --bg-2: rgba(20, 24, 31, 0.46);
+  --bg-3: rgba(28, 33, 42, 0.52);
+  --line: rgba(255, 255, 255, 0.14);
+  --line-strong: rgba(255, 255, 255, 0.24);
+  --ink-1: #f0f3f7; --ink-2: #c3ccd8; --ink-3: #8b97a8;
+  --accent: #4ee1a0; --accent-dim: rgba(78, 225, 160, 0.12);
+  --head-plate: rgba(8, 10, 14, 0.45);
+  --head-plate-border: rgba(255, 255, 255, 0.16);
+  --head-text: "";
+}
 html[data-theme="contrast"] {
   --bg-0: #000000; --bg-1: #0a0a0a; --bg-2: #111111; --bg-3: #1a1a1a;
   --line: #3a3a3a; --line-strong: #6a6a6a;
@@ -142,6 +159,31 @@ html[data-theme="arctic"] body[data-bg="custom"] .group-head {
   padding: 10px 14px;
   backdrop-filter: blur(4px);
 }
+/* photo backgrounds (Immich / custom image): readability scrim behind group
+   headers — semi-opaque dark plate + blur guarantees white text contrast on
+   ANY photo (bright snow, sky, walls), independent of theme. */
+body[data-bg="immich"] .group-head,
+body[data-bg="custom"] .group-head {
+  background: rgba(8, 10, 14, 0.55);
+  border-color: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+body[data-bg="immich"] .group-count,
+body[data-bg="custom"] .group-count {
+  color: #c9d1da;
+}
+html[data-theme="arctic"] body[data-bg="immich"] .group-head,
+html[data-theme="arctic"] body[data-bg="custom"] .group-head {
+  /* arctic keeps its bright plate + dark text (already readable) */
+  background: var(--head-plate);
+  border-color: var(--head-plate-border);
+}
+html[data-theme="arctic"] body[data-bg="immich"] .group-title,
+html[data-theme="arctic"] body[data-bg="custom"] .group-title {
+  color: var(--head-text) !important;
+  text-shadow: none !important;
+}
 html[data-theme="arctic"] body[data-bg="custom"] .group-title,
 html[data-theme="arctic"] body[data-bg="custom"] .group-count {
   color: var(--head-text) !important;
@@ -188,6 +230,28 @@ body.edit-mode .group-actions { display: flex; }
   text-decoration: none; color: var(--ink-1);
   transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
   min-width: 0;
+}
+/* ---------- theme "glass" (Halbtransparent): frosted elements over photo bg ---------- */
+html[data-theme="glass"] .card {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+html[data-theme="glass"] .group-head {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+html[data-theme="glass"] .search-input,
+html[data-theme="glass"] #search {
+  background: var(--bg-1);
+  border-color: var(--line);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+/* scrim override: glass theme defines its own head-plate — use it in photo modes too */
+html[data-theme="glass"] body[data-bg="immich"] .group-head,
+html[data-theme="glass"] body[data-bg="custom"] .group-head {
+  background: var(--head-plate);
+  border-color: var(--head-plate-border);
 }
 .card:hover {
   border-color: var(--accent);
@@ -302,7 +366,7 @@ body.edit-mode .group .del-group { display: inline; }
   color: var(--ink-1); outline: none;
 }
 .field input:focus { border-color: var(--accent); }
-.field .hint { font-size: 11px; color: var(--ink-3); margin-top: 4px; font-family: var(--mono); }
+.field .hint { font-size: 11px; color: var(--ink-2); margin-top: 4px; font-family: var(--mono); }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 22px; }
 .icon-preview { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
 .icon-preview img { width: 28px; height: 28px; }
@@ -479,16 +543,18 @@ body.edit-mode .group-drag-handle { display: inline; }
 .settings-row { display: flex; gap: 12px; flex-wrap: wrap; }
 .settings-field { flex: 1 1 180px; display: flex; flex-direction: column; gap: 6px; }
 .settings-field-name {
-  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em;
-  text-transform: uppercase; color: var(--ink-3);
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--ink-2); font-weight: 600;
 }
-.settings-field select {
+.settings-field select,
+.settings-field input:not([type="checkbox"]):not([type="color"]) {
   width: 100%; font-family: var(--mono); font-size: 13px;
-  padding: 9px 10px; background: var(--bg-0);
+  padding: 10px 12px; background: var(--bg-0);
   border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
   color: var(--ink-1); outline: none;
 }
-.settings-field select:focus { border-color: var(--accent); }
+.settings-field select:focus,
+.settings-field input:not([type="checkbox"]):not([type="color"]):focus { border-color: var(--accent); }
 .settings-field select option { background: var(--bg-1); color: var(--ink-1); }
 #set-language {
   width: 100%; font-family: var(--mono); font-size: 13px;
@@ -649,6 +715,7 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
     <div class="settings-tabs" role="tablist">
       <button class="settings-tab active" id="tab-appearance" type="button" role="tab">Erscheinungsbild</button>
       <button class="settings-tab" id="tab-branding" type="button" role="tab">Branding</button>
+      <button class="settings-tab" id="tab-immich" type="button" role="tab">Immich</button>
       <button class="settings-tab" id="tab-data" type="button" role="tab">Daten</button>
       <button class="settings-tab" id="tab-info" type="button" role="tab">Info</button>
     </div>
@@ -666,6 +733,7 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
             <option value="arctic">Arctic</option>
             <option value="contrast">Contrast</option>
             <option value="deepspace">Deep Space</option>
+            <option value="glass">Halbtransparent</option>
           </select>
         </label>
         <label class="settings-field">
@@ -676,6 +744,7 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
             <option value="starfield">Starfield</option>
             <option value="static">Static</option>
             <option value="custom">Custom</option>
+            <option value="immich">Immich</option>
           </select>
         </label>
       </div>
@@ -750,6 +819,43 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
 
     </div><!-- /pane-branding -->
 
+    <div class="settings-pane" id="pane-immich">
+    <div class="settings-section">
+      <div class="settings-label" id="lbl-immich">Immich-Hintergrund</div>
+      <label class="settings-field">
+        <span class="settings-field-name" id="lbl-immich-url">Immich-URL</span>
+        <input id="set-immich-url" type="text" placeholder="http://immich-server:2283" autocomplete="off">
+      </label>
+      <label class="settings-field">
+        <span class="settings-field-name" id="lbl-immich-key">API-Key</span>
+        <input id="set-immich-key" type="password" placeholder="••••" autocomplete="new-password">
+      </label>
+      <div class="hint" id="hint-immich-key" style="margin-top:-6px"></div>
+      <label class="settings-field">
+        <span class="settings-field-name" id="lbl-immich-album">Album-Name</span>
+        <input id="set-immich-album" type="text" placeholder="Hintergrundbilder">
+      </label>
+      <label class="settings-field">
+        <span class="settings-field-name" id="lbl-immich-interval">Wechsel-Intervall</span>
+        <select id="set-immich-interval">
+          <option value="900">15 min</option>
+          <option value="1800">30 min</option>
+          <option value="3600">1 h</option>
+          <option value="10800">6 h</option>
+          <option value="43200">12 h</option>
+          <option value="86400">24 h</option>
+        </select>
+      </label>
+      <div class="settings-actions" style="margin-top:10px">
+        <button class="btn" id="btn-immich-test" type="button">Verbindung testen</button>
+        <button class="btn primary" id="btn-immich-save" type="button">Speichern</button>
+      </div>
+      <div class="hint" id="immich-status" style="margin-top:8px"></div>
+      <div class="hint" id="hint-immich-privacy" style="margin-top:4px"></div>
+    </div>
+
+    </div><!-- /pane-immich -->
+
     <div class="settings-pane" id="pane-data">
     <div class="settings-section">
       <div class="settings-label" id="lbl-data">Daten</div>
@@ -768,7 +874,7 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
         <div class="settings-label" id="lbl-info-title">Informationen</div>
         <div class="info-row">
           <span class="info-key" id="info-version-key">Version</span>
-          <span class="info-value">1.7.0</span>
+          <span class="info-value">1.8.0</span>
         </div>
         <div class="info-row">
           <span class="info-key" id="info-repo-key">GitHub-Repository</span>

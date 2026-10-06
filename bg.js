@@ -31,6 +31,9 @@
 
   let W = 0, H = 0, dpr = 1;
   let bgImage = null;                     // custom background Image (mode "custom")
+  let immichImg = null;                   // immich background Image (mode "immich")
+  let immichEtag = "0";                   // server-side photo generation counter
+  let immichTimer = null;                 // state poll timer
   let bgImageUrl = null;                  // data-URL of the custom background
   /* starfield state */
   let stars = [];                         // [{x, y, r, a, tw}]  tw = twinkle phase
@@ -602,7 +605,7 @@
       const astCount = Math.max(5, Math.min(11, Math.round((W * H) / 300000)));
       for (let i = 0; i < astCount; i++) spawnAsteroid(true);
     }
-    if (reducedMotion || mode === "static" || mode === "custom") drawFrame(0); /* single static frame */
+    if (reducedMotion || mode === "static" || mode === "custom" || mode === "immich") drawFrame(0); /* single static frame */
   }
 
   function drawCustom() {
@@ -618,11 +621,24 @@
     ctx.drawImage(bgImage, (W - dw) / 2, (H - dh) / 2, dw, dh);
   }
 
+  function drawImmich() {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, H);
+    if (!immichImg) return;
+    const iw = immichImg.naturalWidth || immichImg.width;
+    const ih = immichImg.naturalHeight || immichImg.height;
+    if (!iw || !ih) return;
+    const scale = Math.max(W / iw, H / ih);
+    const dw = iw * scale, dh = ih * scale;
+    ctx.drawImage(immichImg, (W - dw) / 2, (H - dh) / 2, dw, dh);
+  }
+
   function drawFrame(dt) {
     ctx.clearRect(0, 0, W, H);
     if (mode === "pcb") drawPCB(dt);
     else if (mode === "tron") drawLightcycle(dt);
     else if (mode === "custom") drawCustom();
+    else if (mode === "immich") drawImmich();
     else if (mode === "starfield") { ctx.fillStyle = "#05060f"; ctx.fillRect(0, 0, W, H); drawStarfield(dt); }
     else if (staticLayer) ctx.drawImage(staticLayer, 0, 0, W, H);
   }
@@ -666,7 +682,7 @@
         ACCENT = opts.accentRgb;
         needRebuild = true;
       }
-      if (opts && typeof opts.mode === "string" && ["pcb", "tron", "static", "custom", "starfield"].includes(opts.mode) && opts.mode !== mode) {
+      if (opts && typeof opts.mode === "string" && ["pcb", "tron", "static", "custom", "starfield", "immich"].includes(opts.mode) && opts.mode !== mode) {
         mode = opts.mode;
         needRebuild = true;
       }
@@ -691,13 +707,54 @@
         pulses = []; rings = []; cycles = []; explosions = [];
         resize();
         if (mode === "custom") { stop(); drawFrame(0); }
+        else if (mode === "immich") { stop(); drawFrame(0); startImmich(); }
         else if (mode === "static" || reducedMotion) stop(); else start();
       }
     },
     mode() { return mode; },
     /* custom background Image element (for the header contrast sampler) */
-    image() { return mode === "custom" ? bgImage : null; }
+    image() { return mode === "custom" ? bgImage : null; },
+    /* immich background Image element (for the header contrast sampler) */
+    immichImage() { return mode === "immich" ? immichImg : null; }
   };
+
+  /* ---- immich photo background --------------------------------------
+     Polls /api/immich/state every 60 s. When the server-side etag changes
+     (interval-based rotation), the photo is re-fetched with a cache-busting
+     ?v= parameter and drawn; zentrix-bg-loaded re-fires so the header
+     contrast sampler re-runs. Same-origin → canvas sampling stays untainted. */
+  function loadImmichPhoto(force) {
+    const img = new Image();
+    img.onload = () => {
+      immichImg = img;
+      if (mode === "immich") { stop(); drawFrame(0); }
+      try { document.dispatchEvent(new CustomEvent("zentrix-bg-loaded")); } catch (e) {}
+    };
+    img.onerror = () => { /* keep last photo on transient errors */ };
+    img.src = "/api/immich/photo?v=" + encodeURIComponent(immichEtag) +
+              (force ? "&t=" + Date.now() : "");
+  }
+  function pollImmichState() {
+    fetch("/api/immich/state", { credentials: "same-origin" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((st) => {
+        if (!st || !st.configured) return;
+        if (String(st.etag) !== String(immichEtag)) {
+          immichEtag = String(st.etag);
+          loadImmichPhoto(true);
+        }
+      })
+      .catch(() => {});
+  }
+  function startImmich() {
+    if (immichTimer) return;
+    pollImmichState();
+    loadImmichPhoto(true);
+    immichTimer = setInterval(pollImmichState, 60000);
+  }
+  function stopImmich() {
+    if (immichTimer) { clearInterval(immichTimer); immichTimer = null; }
+  }
 
   resize();
   if (!reducedMotion) start();

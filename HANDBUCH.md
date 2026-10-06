@@ -1,6 +1,6 @@
 # Zentrix Homelab Dashboard — User Manual
 
-**Version 1.7.0** · September 2026
+**Version 1.8.0** · September 2026
 
 The Zentrix dashboard is a lightweight homelab dashboard in the "Binary"
 design: all homelab services as tiles in freely arrangeable groups, with

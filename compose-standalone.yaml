@@ -12,6 +12,12 @@ services:
     ports:
       - "8080:8080"
     environment:
+      TZ: Europe/Berlin
+      # Optional — Immich photo background (or configure in the ⚙ settings GUI):
+      # IMMICH_URL: http://immich-server:2283
+      # IMMICH_ALBUM: Backgrounds
+      # IMMICH_INTERVAL: "3600"
+      # IMMICH_API_KEY_FILE: /run/secrets/immich_key
       ZENTRIX_DATA_FILE: /data/links.json
     volumes:
       - /opt/zentrix/data:/data

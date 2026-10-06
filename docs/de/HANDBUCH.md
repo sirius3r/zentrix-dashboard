@@ -1,6 +1,6 @@
 # Zentrix Homelab Dashboard — Benutzerhandbuch
 
-**Version 1.7.0** · Stand: September 2026
+**Version 1.8.0** · Stand: September 2026
 
 Das Zentrix-Dashboard ist ein leichtgewichtiges Homelab-Dashboard im
 „Binary"-Design: alle Dienste des Homelabs als Kacheln in frei anordnbaren

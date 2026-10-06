@@ -259,11 +259,97 @@ class Handler(BaseHTTPRequestHandler):
             self._json(200, load_data())
         elif path == "/api/health":
             self._json(200, {"status": "ok", "token_required_for_write": True})
+        elif path == "/api/immich/state":
+            # public status for the background client (never contains the key);
+            # rotate_if_due() triggers the hourly fetch — cheap when not due
+            from immich_client import STATE, masked_config
+            body, current_etag, meta = STATE.rotate_if_due()
+            mc = masked_config()
+            self._json(200, {"configured": meta.get("configured", mc.get("configured", False)),
+                             "etag": current_etag,
+                             "error": meta.get("error", ""),
+                             "interval": mc["interval"],
+                             "album": mc["album"],
+                             "key_set": mc["key_set"]})
+        elif path == "/api/immich/photo":
+            from immich_client import STATE
+            body, etag, meta = STATE.rotate_if_due()
+            if not body:
+                self._err(503, "err_not_found")
+                return
+            self._headers(200, "image/jpeg", len(body), {
+                "ETag": f'"{etag}"',
+                "Cache-Control": "no-store",
+            })
+            self.wfile.write(body)
+        elif path == "/api/immich/config":
+            if not self._authorized():
+                self._err(401, "err_auth")
+                return
+            from immich_client import masked_config
+            self._json(200, masked_config())
         else:
             self._err(404, "err_not_found")
 
+    def do_POST(self):
+        path = self.path.split("?", 1)[0]
+        if path == "/api/immich/test":
+            if not self._authorized():
+                self._err(401, "err_auth")
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                length = 0
+            if length > 64 * 1024:
+                self._err(413, "err_too_large", kb=64)
+                return
+            raw = self.rfile.read(length) if length else b"{}"
+            try:
+                data = json.loads(raw.decode("utf-8")) if raw else {}
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                data = {}
+            from immich_client import get_config, STATE
+            cfg = get_config()
+            # probe with the submitted values (fall back to stored config)
+            cfg = {
+                "url": str(data.get("url", "")).strip().rstrip("/") or cfg["url"],
+                "key": str(data.get("key", "")).strip() or cfg["key"],
+                "album": str(data.get("album", "")).strip() or cfg["album"],
+                "interval": cfg["interval"],
+            }
+            self._json(200, STATE.probe(cfg))
+            return
+        self._err(404, "err_not_found")
+
     def do_PUT(self):
         path = self.path.split("?", 1)[0]
+        if path == "/api/immich/config":
+            if not self._authorized():
+                self._err(401, "err_auth")
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                self._err(400, "err_content_length")
+                return
+            if length <= 0 or length > 64 * 1024:
+                self._err(413, "err_too_large", kb=64)
+                return
+            raw = self.rfile.read(length)
+            try:
+                data = json.loads(raw.decode("utf-8"))
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                self._err(400, "err_bad_json")
+                return
+            from immich_client import save_gui_config, STATE
+            if not save_gui_config(data):
+                self._err(400, "err_bad_format")
+                return
+            # config changed → force next photo fetch + album re-resolve (thread-safe)
+            STATE.reset_runtime()
+            self._json(200, {"status": "saved"})
+            return
         if path != "/api/links":
             self._err(404, "err_not_found")
             return

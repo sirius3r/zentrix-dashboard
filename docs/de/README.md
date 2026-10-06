@@ -6,7 +6,7 @@ Kacheln in frei anordnbaren Gruppen — mit serverseitiger Speicherung,
 Kein Framework, keine Build-Tools, keine Laufzeit-Abhängigkeiten:
 nur statische Dateien plus ein kleines Python-Backend (nur Stdlib).
 
-![Version](https://img.shields.io/badge/version-1.7.0-blue)
+![Version](https://img.shields.io/badge/version-1.8.0-blue)
 ![Python](https://img.shields.io/badge/python-3.12-informational)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -17,7 +17,7 @@ nur statische Dateien plus ein kleines Python-Backend (nur Stdlib).
 - **Suche** — Live-Filter, `Strg+K`, Auto-Leeren nach Trefferklick
 - **6 Themes** — Binary, Phosphor, Amber, Arctic (hell), Deep Space,
   Kontrastreich; **Akzentfarbe pro Theme frei wählbar**
-- **5 Hintergründe** — Leiterplatte (animiert), Lightcycles (mit
+- **6 Hintergründe** — Leiterplatte (animiert), Lightcycles (mit
   Kollisionen & Explosionen), Sternenfeld mit Asteroiden, Statisch,
   eigenes Bild (Upload)
 - **24 Sprachen** — inkl. RTL (Arabisch), automatische Spracherkennung
@@ -59,6 +59,36 @@ docker run -d --name zentrix -p 8080:8080 \
 python3 zentrix-server.py
 # → http://0.0.0.0:8080  (Token wird generiert und in token.txt abgelegt)
 ```
+
+## Immich-Fotohintergrund
+
+Lass den Dashboard-Hintergrund durch ein Fotoalbum deiner **Immich**-Instanz
+rotieren. Konfiguration entweder in den Einstellungen (⚙ → Branding → Immich)
+oder über Umgebungsvariablen / Docker-Secrets:
+
+| Variable | Secret-Datei | Bedeutung |
+|---|---|---|
+| `IMMICH_URL` | `IMMICH_URL_FILE` | Immich-Basis-URL, z. B. `http://immich-server:2283` |
+| `IMMICH_API_KEY` | `IMMICH_API_KEY_FILE` | Immich API-Key (Einstellungen → API Keys) |
+| `IMMICH_ALBUM` | `IMMICH_ALBUM_FILE` | Album-Name |
+| `IMMICH_INTERVAL` | — | Rotationsintervall in Sekunden (min 60, Standard 3600) |
+
+**API-Key erstellen (Immich):** In der Immich-Weboberfläche anmelden →
+oben rechts aufs Profilsymbol klicken → **Kontoeinstellungen** →
+**API-Keys** → **Neuer API-Key** (Name vergeben, z. B. „Zentrix") → den
+angezeigten Schlüssel einmalig kopieren und in Zentrix (⚙ → Branding →
+Immich) oder als Secret/ENV eintragen. Der Key lässt sich in Immich jederzeit
+widerrufen und neu erstellen.
+Vergebe beim Erstellen nur die **minimal notwendigen Rechte**, die Zentrix
+braucht: `asset.read`, `asset.view` (Thumbnail) und `album.read` — nichts
+weiter (`asset.download` wird **nicht** benötigt, Zentrix lädt nur
+Preview-Thumbnails).
+
+Der API-Key **verlässt den Server nie**: Das Dashboard holt das aktuelle Foto
+über `GET /api/immich/photo` (same origin) — der Browser erhält nur Bilddaten,
+nie Zugangsdaten. GUI-Konfiguration (Write-only-Key-Feld) hat Vorrang vor
+ENV/Secret-Werten. Rotation per Shuffle-Bag: jedes Foto genau einmal pro
+Zyklus, keine schnellen Wiederholungen.
 
 ## Swarm / Compose
 

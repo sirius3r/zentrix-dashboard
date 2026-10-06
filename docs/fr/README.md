@@ -6,7 +6,7 @@ tuiles dans des groupes librement organisables — avec stockage côté serveur,
 d'outils de build, aucune dépendance à l'exécution : uniquement des fichiers
 statiques et un petit backend Python (stdlib uniquement).
 
-![Version](https://img.shields.io/badge/version-1.7.0-blue)
+![Version](https://img.shields.io/badge/version-1.8.0-blue)
 ![Python](https://img.shields.io/badge/python-3.12-informational)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -64,6 +64,36 @@ docker run -d --name zentrix -p 8080:8080 \
 python3 zentrix-server.py
 # → http://0.0.0.0:8080  (le jeton est généré et stocké dans token.txt)
 ```
+
+## Photo de fond Immich
+
+Faites défiler l'arrière-plan du dashboard avec un album photo de votre
+instance **Immich**. Configuration dans les réglages (⚙ → Branding → Immich)
+ou via variables d'environnement / secrets Docker :
+
+| Variable | Fichier secret | Signification |
+|---|---|---|
+| `IMMICH_URL` | `IMMICH_URL_FILE` | URL de base Immich, ex. `http://immich-server:2283` |
+| `IMMICH_API_KEY` | `IMMICH_API_KEY_FILE` | Clé API Immich (Paramètres → API Keys) |
+| `IMMICH_ALBUM` | `IMMICH_ALBUM_FILE` | Nom de l'album |
+| `IMMICH_INTERVAL` | — | Intervalle de rotation en secondes (min 60, défaut 3600) |
+
+**Créer la clé API (Immich) :** connectez-vous à l'interface web Immich →
+cliquez sur l'icône de profil en haut à droite → **Paramètres du compte** →
+**Clés API** → **Nouvelle clé API** (donnez un nom, ex. « Zentrix ») → copiez
+la clé affichée (une seule fois) et saisissez-la dans Zentrix (⚙ → Branding →
+Immich) ou via secret/ENV. La clé peut être révoquée et recréée à tout moment
+dans Immich.
+Lors de la création, n'accordez que les **permissions minimales** dont
+Zentrix a besoin : `asset.read`, `asset.view` (miniature) et `album.read` —
+rien de plus (`asset.download` n'est **pas** requis, Zentrix ne récupère que
+des miniatures preview).
+
+La clé API **ne quitte jamais le serveur** : le dashboard récupère la photo
+actuelle via `GET /api/immich/photo` (same origin) — le navigateur ne reçoit
+que les octets de l'image, jamais les identifiants. La configuration GUI
+(champ clé en écriture seule) prime sur les valeurs env/secret. Rotation par
+shuffle-bag : chaque photo apparaît exactement une fois par cycle.
 
 ## Swarm / Compose
 

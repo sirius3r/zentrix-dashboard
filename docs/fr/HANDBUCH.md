@@ -1,6 +1,6 @@
 # Zentrix Homelab Dashboard — Manuel utilisateur
 
-**Version 1.7.0** · Septembre 2026
+**Version 1.8.0** · Septembre 2026
 
 Le tableau de bord Zentrix est un dashboard homelab léger au design
 « Binary » : tous les services du homelab en tuiles dans des groupes
