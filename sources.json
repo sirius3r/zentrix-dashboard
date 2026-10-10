@@ -1,0 +1,21 @@
+{
+ "opnsense": {
+  "enabled": true,
+  "url": "http://127.0.0.1:19999",
+  "poll_s": 30,
+  "areas": [],
+  "key": "k-good",
+  "secret": "s-good"
+ },
+ "tr064": {
+  "enabled": false,
+  "url": "",
+  "user": "",
+  "poll_s": 300,
+  "password": ""
+ },
+ "mdns": {
+  "enabled": false,
+  "poll_s": 300
+ }
+}

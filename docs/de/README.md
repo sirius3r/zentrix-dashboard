@@ -6,7 +6,7 @@ Kacheln in frei anordnbaren Gruppen — mit serverseitiger Speicherung,
 Kein Framework, keine Build-Tools, keine Laufzeit-Abhängigkeiten:
 nur statische Dateien plus ein kleines Python-Backend (nur Stdlib).
 
-![Version](https://img.shields.io/badge/version-1.8.0-blue)
+![Version](https://img.shields.io/badge/version-1.10.0-alpha-blue)
 ![Python](https://img.shields.io/badge/python-3.12-informational)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -23,6 +23,9 @@ nur statische Dateien plus ein kleines Python-Backend (nur Stdlib).
 - **24 Sprachen** — inkl. RTL (Arabisch), automatische Spracherkennung
 - **Branding** — eigener Topbar-Text, eigenes Favicon
 - **Server-Sync** — Token-geschütztes Speichern, Export/Import als JSON
+- **Netzwerk-Topologie** — Live-Geräteansicht aus Router-APIs (OPNsense: ARP +
+  DHCP-Leases, passives mDNS), IEEE-OUI-Herstellererkennung (~58k Einträge),
+  Aggregat-Graph mit Bereichs-Clustern und durchsuchbarer Geräteliste
 - **Adaptive Lesbarkeit** — Überschriften passen ihren Kontrast automatisch
   an das Hintergrundbild an
 - **Mobil** — einzeilige Topbar, Lupe für die Suche, Touch-optimiert
@@ -89,6 +92,40 @@ Der API-Key **verlässt den Server nie**: Das Dashboard holt das aktuelle Foto
 nie Zugangsdaten. GUI-Konfiguration (Write-only-Key-Feld) hat Vorrang vor
 ENV/Secret-Werten. Rotation per Shuffle-Bag: jedes Foto genau einmal pro
 Zyklus, keine schnellen Wiederholungen.
+
+## Netzwerk-Topologie (Phase 1)
+
+Das Dashboard kann die Geräte deines Netzes als Live-Topologie anzeigen.
+Datenquellen (⚙ → ARP/IP):
+
+- **OPNsense (API)** — ARP-Tabelle + DHCPv4-Leases über die REST-API. Lege
+  einen eigenen API-Key (oder Nur-Lese-Benutzer) an; Key/Secret bleiben auf
+  dem Zentrix-Server (Write-only-Felder, erreichen nie den Browser).
+- **mDNS (passiv)** — empfängt UDP-5353-Broadcasts, ohne selbst Anfragen zu
+  senden.
+
+> **Benötigte OPNsense-Berechtigungen** (System → Access → Users → ✎ →
+> *Berechtigungen*): **Diagnostics: ARP Table** und **Diagnostics: Network
+> Insight**. Für DHCP-Lease-Daten zusätzlich die Lese-Berechtigung des
+> DHCP-Dienstes; Interface-Daten kommen aus *Diagnostics: Interfaces*.
+> Antwortet die API mit `403`, fehlt eine davon.
+
+Geräte aus allen Quellen werden zusammengeführt (primär per MAC, sonst per
+IP), Hersteller stammen aus der mitgelieferten IEEE-OUI-Registrierung, und
+jedes Gerät zeigt seine Quellen und seine Konfidenz. Die Topologie-Ansicht
+ist strikt read-only: Zentrix schreibt niemals in den Router.
+
+Die Konfiguration liegt in `sources.json` im Data-Volume; GUI-Einstellungen
+haben Vorrang vor Umgebungsvariablen (`OPNSENSE_URL`, `OPNSENSE_API_KEY`,
+`OPNSENSE_API_SECRET`, `FRITZBOX_*` — ein FRITZ!Box-Adapter ist für ein
+späteres Release geplant).
+
+> **OPNsense-Zugangsdaten:** Zentrix nutzt das *API-Key + API-Secret*-Paar,
+> das OPNsense einmalig beim Erstellen anzeigt (System → Zugriff → Benutzer →
+> ✎ → API-Keys → +). Den **Key** ins Feld „API-Key", das **Secret** ins Feld
+> „API-Secret" — Zentrix sendet beide als HTTP-Basic-Auth. Die Basis-URL
+> genügt (z. B. `https://opnsense.lan:444`); die API-Pfade werden automatisch
+> ergänzt, Reverse-Proxy-Unterpfade und eigene Ports funktionieren direkt.
 
 ## Swarm / Compose
 

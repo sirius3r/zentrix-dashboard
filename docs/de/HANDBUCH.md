@@ -29,6 +29,7 @@ Python-Backend.
 14. [Docker-Betrieb](#14-docker-betrieb)
 15. [TLS / Reverse Proxy](#15-tls--reverse-proxy)
 16. [Fehlersuche](#16-fehlersuche)
+17. [ARP-Tabelle & IP-Verteilung](#17-arp-tabelle--ip-verteilung)
 
 ---
 
@@ -452,3 +453,57 @@ zeigen lassen.
 | Uhr weg | In ⚙ → „Datum & Uhr anzeigen" einschalten |
 | Animation zu wild/ruhig | Anderen Hintergrund wählen; `prefers-reduced-motion` des OS wird respektiert |
 | Sprache soll anders sein | ⚙ → Registerkarte Erscheinungsbild → Sprache; wird pro Browser gemerkt |
+---
+
+## 17. ARP-Tabelle & IP-Verteilung
+
+Der **⌖**-Button in der Topbar öffnet die Ansicht *ARP-Tabelle &
+IP-Verteilung* — ein Live-Bild aller Geräte, die der Router aktuell kennt,
+geordnet nach Netzwerkbereichen.
+
+### 17.1 Das linke Panel lesen
+
+- **`// CORE`-Karte** — der Router (z. B. OPNsense) mit Anzahl der erkannten
+  Interfaces und Bereiche.
+- **Interface-Karten (linke Spalte)** — eine Karte pro konfiguriertem
+  Interface, aufsteigend nach IP-Bereich sortiert: Typ (`LAN`, `WAN`, `VPN`,
+  …), Name und IP/Subnetz. Pseudo-Interfaces (Loopback, `pfsync0`, …) sind
+  ausgeblendet.
+- **Bereichs-Karten (rechte Spalte)** — die Gerätegruppen hinter den
+  Interfaces: Bereichsname, `online/gesamt`-Zähler und Badge mit Gerätezahl.
+  Klick auf die Karte klappt die zugehörigen Zeilen in der Geräteliste auf.
+- Eine dünne **Verbindungslinie** koppelt jedes Interface mit *seinem*
+  Bereich — die Zuordnung wird per Subnetz aufgelöst, was nebeneinander steht
+  gehört zusammen.
+
+### 17.2 Die Geräteliste (rechtes Panel)
+
+- **Filterzeile** — filtert live nach Bestandteilen von IP, MAC, Hostname,
+  Lease-Typ und Hersteller.
+- **Chips** — `alle (n)` / `nur online`; **Dropdowns** für Bereich und
+  Hersteller.
+- **Spalten** — Statuspunkt (grün = online, grau = offline), Hostname, IP,
+  MAC, Hersteller (IEEE OUI), Quellen (z. B. `opnsense`, `mdns`) und
+  Lease-Typ.
+- Geräte mit abgelaufener Lease bleiben (offline) gelistet — so sieht man
+  Geister-Geräte; statische Hosts ohne DHCP-Lease erscheinen über die
+  ARP-Tabelle.
+
+### 17.3 Gerätedetails
+
+Klick auf eine Gerätezeile öffnet das **Detail-Overlay**: Identität
+(klickbarer Hostname/IP — öffnet wie die Dashboard-Links in einem neuen
+Browser-Tab), Status, Quellen, Konfidenz, letzte Sichtung und der voll-
+ständige Lease-Datensatz (Typ, Zeitraum, Restzeit, Router-Interface).
+VPN-Peers zeigen zusätzlich Handshake-Alter und Transfer-Zähler (WireGuard)
+bzw. Session-Infos (OpenVPN/IPsec).
+
+### 17.4 Verhalten
+
+- Die Daten aktualisieren sich automatisch alle **30 s**; die Statuszeile im
+  Kopf zeigt die Quellen-Zustände (`●` ok, `⚠` eingeschränkt, `○` aus).
+- Alles ist **read-only**: das Dashboard schreibt niemals in den Router.
+- Benötigte OPNsense-Berechtigungen — siehe README-Abschnitt
+  *Netzwerk-Topologie*: **Diagnostics: ARP Table** und **Diagnostics:
+  Network Insight** (zusätzlich DHCP-Lesezugriff für Lease-Daten).
+

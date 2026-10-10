@@ -6,7 +6,7 @@ tuiles dans des groupes librement organisables — avec stockage côté serveur,
 d'outils de build, aucune dépendance à l'exécution : uniquement des fichiers
 statiques et un petit backend Python (stdlib uniquement).
 
-![Version](https://img.shields.io/badge/version-1.8.0-blue)
+![Version](https://img.shields.io/badge/version-1.10.0-alpha-blue)
 ![Python](https://img.shields.io/badge/python-3.12-informational)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -27,6 +27,10 @@ statiques et un petit backend Python (stdlib uniquement).
 - **24 langues** — dont RTL (arabe), détection automatique de la langue
 - **Branding** — texte de barre supérieur personnalisé, favicon personnel
 - **Synchro serveur** — enregistrement protégé par jeton, export/import JSON
+- **Table ARP & répartition IP** — vue des appareils en direct depuis les API
+  routeurs (OPNsense : ARP + baux DHCP, mDNS passif), identification fabricant
+  via IEEE OUI (~58k entrées), graphe agrégé avec clusters par zone et liste
+  d'appareils consultable
 - **Lisibilité adaptative** — les titres de groupes ajustent automatiquement
   leur contraste à l'image de fond
 - **Mobile** — barre supérieure une ligne, loupe pour la recherche, optimisé
@@ -94,6 +98,43 @@ actuelle via `GET /api/immich/photo` (same origin) — le navigateur ne reçoit
 que les octets de l'image, jamais les identifiants. La configuration GUI
 (champ clé en écriture seule) prime sur les valeurs env/secret. Rotation par
 shuffle-bag : chaque photo apparaît exactement une fois par cycle.
+
+## Topologie réseau (Phase 1)
+
+Le dashboard peut afficher les appareils de votre réseau sous forme de
+topologie en direct. Sources de données (⚙ → ARP/IP) :
+
+- **OPNsense (API)** — table ARP + baux DHCPv4 via l'API REST. Créez une clé
+  API dédiée (ou un utilisateur en lecture seule) ; la clé/le secret restent
+  sur le serveur Zentrix (champs en écriture seule, jamais envoyés au
+  navigateur).
+- **mDNS (passif)** — écoute les diffusions UDP 5353 sans envoyer de
+  requêtes.
+
+> **Privilèges OPNsense requis** (System → Access → Users → ✎ →
+> *Privilèges*) : **Diagnostics: ARP Table** et **Diagnostics: Network
+> Insight**. Les données de baux DHCP nécessitent en plus la permission de
+> lecture du service DHCP ; les interfaces proviennent de *Diagnostics:
+> Interfaces*. Si l'API répond `403`, l'un d'eux manque.
+
+Les appareils de toutes les sources sont fusionnés (par MAC, sinon par IP),
+les fabricants proviennent du registre IEEE OUI embarqué, et chaque appareil
+affiche ses sources et son niveau de confiance. La vue topologie est en
+lecture seule : Zentrix n'écrit jamais dans le routeur.
+
+La configuration se trouve dans `sources.json` dans le volume de données ;
+les réglages GUI priment sur les variables d'environnement (`OPNSENSE_URL`,
+`OPNSENSE_API_KEY`, `OPNSENSE_API_SECRET`, `FRITZBOX_*` — un adaptateur
+FRITZ!Box est prévu pour une version ultérieure).
+
+> **Identifiants OPNsense :** Zentrix utilise la paire *clé API + secret API*
+> qu'OPNsense affiche une seule fois à la création (Système → Accès →
+> Utilisateurs → ✎ → Clés API → +). Saisissez la **clé** dans le champ
+> « API-Key » et le **secret** dans « API-Secret » — Zentrix les envoie en
+> authentification Basic HTTP. L'URL de base suffit (ex.
+> `https://opnsense.lan:444`) ; les chemins API sont ajoutés
+> automatiquement, les sous-chemins reverse-proxy et ports personnalisés
+> fonctionnent directement.
 
 ## Swarm / Compose
 

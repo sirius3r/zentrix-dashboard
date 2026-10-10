@@ -131,6 +131,7 @@ def save_data(data: dict) -> bool:
         data_dir.mkdir(parents=True, exist_ok=True)
     except OSError:
         pass
+    tmp = None
     try:
         fd, tmp = tempfile.mkstemp(dir=str(data_dir), prefix=".links-", suffix=".tmp")
         with os.fdopen(fd, "w", encoding="utf-8") as f:
@@ -138,10 +139,11 @@ def save_data(data: dict) -> bool:
         os.replace(tmp, DATA_FILE)
         return True
     except OSError:
-        try:
-            os.unlink(tmp)
-        except OSError:
-            pass
+        if tmp:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
         return False
 
 # ---------------------------------------------------------------- http
@@ -237,7 +239,7 @@ class Handler(BaseHTTPRequestHandler):
             except OSError:
                 self._err(404, "err_missing_file", file="bg.js")
                 return
-            self._headers(200, "application/javascript; charset=utf-8", len(body), {"Cache-Control": "public, max-age=86400"})
+            self._headers(200, "application/javascript; charset=utf-8", len(body), {"Cache-Control": "no-cache"})
             self.wfile.write(body)
         elif path == "/app.js":
             try:
@@ -253,7 +255,16 @@ class Handler(BaseHTTPRequestHandler):
             except OSError:
                 self._err(404, "err_missing_file", file="i18n.js")
                 return
-            self._headers(200, "application/javascript; charset=utf-8", len(body), {"Cache-Control": "public, max-age=86400"})
+            self._headers(200, "application/javascript; charset=utf-8", len(body), {"Cache-Control": "no-cache"})
+            self.wfile.write(body)
+        elif path == "/topology.js":
+            try:
+                body = (BASE_DIR / "topology.js").read_bytes()
+            except OSError:
+                self._err(404, "err_missing_file", file="topology.js")
+                return
+            self._headers(200, "application/javascript; charset=utf-8", len(body),
+                          {"Cache-Control": "no-cache"})
             self.wfile.write(body)
         elif path == "/api/links":
             self._json(200, load_data())
@@ -288,6 +299,19 @@ class Handler(BaseHTTPRequestHandler):
                 return
             from immich_client import masked_config
             self._json(200, masked_config())
+        elif path == "/api/topology/view":
+            from source_registry import REGISTRY
+            self._json(200, REGISTRY.fetch_topology_data())
+        elif path == "/api/topology/devices":
+            # device snapshot (public read like /api/links; contains no secrets)
+            from source_registry import REGISTRY
+            self._json(200, REGISTRY.snapshot())
+        elif path == "/api/topology/sources":
+            if not self._authorized():
+                self._err(401, "err_auth")
+                return
+            from sources_config import SOURCES_CONFIG
+            self._json(200, SOURCES_CONFIG.public_state())
         else:
             self._err(404, "err_not_found")
 
@@ -320,6 +344,61 @@ class Handler(BaseHTTPRequestHandler):
             }
             self._json(200, STATE.probe(cfg))
             return
+        if path == "/api/topology/probe":
+            if not self._authorized():
+                self._err(401, "err_auth")
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                length = 0
+            if length > 64 * 1024:
+                self._err(413, "err_too_large", kb=64)
+                return
+            raw = self.rfile.read(length) if length else b"{}"
+            try:
+                data = json.loads(raw.decode("utf-8")) if raw else {}
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                data = {}
+            src_id = str(data.get("source", "")).strip()
+            from sources_config import SOURCES_CONFIG
+            state = SOURCES_CONFIG.public_state()
+            if src_id not in state:
+                self._json(200, {"ok": False, "error_code": "config",
+                                 "message": "unknown source"})
+                return
+            probe_cfg = dict(state[src_id])
+            # allow URL override from the dialog; typed secrets are used for THIS
+            # probe only (never persisted — persisting happens via Speichern)
+            if data.get("url"):
+                probe_cfg["url"] = str(data["url"]).strip()
+            typed_key = str(data.get("key", "") or "").strip()
+            typed_secret = str(data.get("secret", "") or "").strip()
+            if src_id == "opnsense":
+                from opnsense_source import OpnSenseSource
+                adapter = OpnSenseSource()
+                result = None
+                try:
+                    result = adapter.probe(probe_cfg,
+                                           key=typed_key or SOURCES_CONFIG.secret("opnsense", "key"),
+                                           secret=typed_secret or SOURCES_CONFIG.secret("opnsense", "secret"))
+                except Exception as e:
+                    code = getattr(e, "code", "error")
+                    result = {"ok": False, "reachable": code != "unreachable",
+                              "authenticated": code != "auth", "device_count": None,
+                              "latency_ms": 0, "router_model": None, "error_code": code,
+                              "message": str(e)}
+                self._json(200, result)
+                return
+            if src_id == "tr064":
+                # Phase 4 — adapter not implemented yet; honest answer
+                self._json(200, {"ok": False, "reachable": False, "authenticated": False,
+                                 "device_count": None, "latency_ms": 0,
+                                 "router_model": None, "error_code": "config",
+                                 "message": "FRITZ!Box adapter is planned for Phase 4"})
+                return
+            self._json(200, {"ok": False, "error_code": "config", "message": "not probeable"})
+            return
         self._err(404, "err_not_found")
 
     def do_PUT(self):
@@ -348,6 +427,36 @@ class Handler(BaseHTTPRequestHandler):
                 return
             # config changed → force next photo fetch + album re-resolve (thread-safe)
             STATE.reset_runtime()
+            self._json(200, {"status": "saved"})
+            return
+        if path == "/api/topology/sources":
+            if not self._authorized():
+                self._err(401, "err_auth")
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                self._err(400, "err_content_length")
+                return
+            if length <= 0 or length > 64 * 1024:
+                self._err(413, "err_too_large", kb=64)
+                return
+            raw = self.rfile.read(length)
+            try:
+                data = json.loads(raw.decode("utf-8"))
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                self._err(400, "err_bad_json")
+                return
+            if not isinstance(data, dict):
+                self._err(400, "err_bad_format")
+                return
+            from sources_config import SOURCES_CONFIG
+            SOURCES_CONFIG.update_from_gui(data)
+            try:
+                from source_registry import apply_runtime_config
+                apply_runtime_config()
+            except Exception:
+                pass
             self._json(200, {"status": "saved"})
             return
         if path != "/api/links":
@@ -387,11 +496,55 @@ def main():
     print(f"[zentrix] serving {INDEX_FILE.name} on http://{bind}:{port}")
     print(f"[zentrix] data file: {DATA_FILE}")
     print(f"[zentrix] write token: {'from env/file' if (os.environ.get('ZENTRIX_TOKEN') or TOKEN_FILE.exists()) else 'see above'}")
+    _start_topology()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         print("\n[zentrix] bye")
         server.server_close()
+
+
+def _start_topology():
+    """Phase 1: device sources (OPNsense adapter + passive mDNS) — all optional."""
+    try:
+        from sources_config import SOURCES_CONFIG
+        from source_registry import REGISTRY
+        from opnsense_source import OpnSenseSource
+        from mdns_source import MdnsListener
+        OUI_PATH = BASE_DIR / "oui-manuf.json.gz"
+        REGISTRY.oui.path = OUI_PATH
+        enabled = SOURCES_CONFIG.public_state().get("opnsense", {}).get("enabled")
+        REGISTRY.register(
+            OpnSenseSource(),
+            cfg_getter=lambda: SOURCES_CONFIG.get("opnsense"),
+            secret_getter=lambda f: SOURCES_CONFIG.secret("opnsense", f),
+            secret_fields=("key", "secret"),
+        )
+        MDNS = MdnsListener()
+        import source_registry as _sr
+        _sr.MDNS_LISTENER = MDNS
+        mdns_enabled = SOURCES_CONFIG.public_state().get("mdns", {}).get("enabled")
+        if mdns_enabled:
+            MDNS.start()
+        # always register so the GUI sees the source status (enabled flag decides polling)
+        REGISTRY.register(
+            type("MdnsAdapter", (), {
+                "source_id": "mdns",
+                "display_name": "mDNS (passiv)",
+                "capabilities": frozenset({"CAP_MDNS"}),
+                "fetch_devices": staticmethod(lambda cfg=None: MDNS.drain()),
+            })(),
+            cfg_getter=lambda: SOURCES_CONFIG.get("mdns"),
+            secret_getter=lambda f: "",
+            secret_fields=(),
+        )
+        REGISTRY.start()
+        print(f"[zentrix] topology: opnsense={'on' if enabled else 'off'}, "
+              f"mdns={'on' if mdns_enabled else 'off'}, oui="
+              f"{'ok' if REGISTRY.oui.path.exists() else 'missing'}")
+    except Exception as e:
+        # topology must never break the dashboard (spec §2)
+        print(f"[zentrix] topology disabled: {e}", file=sys.stderr)
 
 if __name__ == "__main__":
     main()

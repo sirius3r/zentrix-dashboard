@@ -484,7 +484,7 @@ body.edit-mode .group-drag-handle { display: inline; }
 }
 /* ---------- settings tabs ---------- */
 .settings-tabs {
-  display: flex; gap: 6px; margin-bottom: 18px;
+  display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px;
   border-bottom: 1px solid var(--line); padding-bottom: 10px;
 }
 .settings-tab {
@@ -533,7 +533,7 @@ body.edit-mode .group-drag-handle { display: inline; }
 
 /* ---------- settings ---------- */
 .icon-btn { font-size: 16px; padding: 7px 11px; }
-.settings-modal { width: min(520px, calc(100vw - 40px)); }
+.settings-modal { width: min(640px, calc(100vw - 40px)); }
 .settings-section { margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
 .settings-section:last-of-type { border-bottom: none; }
 .settings-label {
@@ -645,6 +645,96 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
 .sync-chip.err { border-color: rgba(255,107,107,0.5); color: var(--danger); }
 .sync-chip { cursor: pointer; user-select: none; transition: border-color 0.15s, color 0.15s; }
 .sync-chip:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ============ TOPOLOGY VIEW (Phase 1) ============ */
+#topology-view { max-width: min(2200px, 96vw); margin: 0 auto; padding: clamp(12px, 2vw, 32px) clamp(12px, 2.5vw, 56px) 40px; position: relative; z-index: 1; }
+.topo-head { display: flex; align-items: baseline; gap: 18px; margin-bottom: 14px; flex-wrap: wrap; }
+.topo-title { font-family: var(--mono); font-size: clamp(13px, 1.1vw, 17px); letter-spacing: 0.08em; color: var(--ink-1); }
+.topo-accent { color: var(--accent); }
+.topo-status { color: var(--ink-3); font-size: clamp(11px, 0.95vw, 14px); margin-left: 12px; }
+.topo-actions { margin-left: auto; display: flex; gap: 8px; }
+.topo-grid { display: grid; grid-template-columns: minmax(380px, 0.95fr) minmax(400px, 1.05fr); gap: clamp(10px, 1.2vw, 20px); align-items: stretch; }
+@media (max-width: 1100px) { .topo-grid { grid-template-columns: 1fr; } }
+@media (min-width: 2400px) {
+  /* 4K: proportionale Skalierung statt starre Max-Breite */
+  #topology-view { max-width: 2400px; }
+  .topo-title { font-size: 19px; }
+  .topo-status { font-size: 15px; }
+  .topo-row { font-size: 13px; padding: 7px 10px; }
+  .topo-chip, .topo-select { font-size: 13px; padding: 8px 14px; }
+  .topo-listfilter { font-size: 14px; }
+  .topo-hint { font-size: 13px; }
+  .topo-left, .topo-right { padding: 18px; }
+}
+@media (max-width: 1100px) {
+  .topo-left, .topo-right { min-height: 0; max-height: none; }
+  .topo-right { max-height: 560px; }
+  .topo-head { gap: 10px; }
+  .topo-actions { width: 100%; margin-left: 0; }
+}
+@media (max-width: 640px) {
+  #topology-view { padding: 10px 10px 30px; }
+  .topo-row { grid-template-columns: 18px minmax(90px, 1fr) 92px 0 62px minmax(80px, 1fr) 0;
+    gap: 6px; font-size: 10px; }
+  /* Mobile: MAC + QUELLEN ausblenden (Platz) */
+  .topo-row .c-mac, .topo-row .c-src { display: none; }
+  .topo-filters { gap: 6px; }
+  .topo-detail .kv { grid-template-columns: 110px 1fr; }
+}
+.topo-left { background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px;
+  display: flex; flex-direction: column; }
+#topo-canvas { width: 100%; flex: 1; min-height: 320px; display: block; border-radius: 8px; }
+
+.topo-hint { color: var(--ink-3); font-size: 11px; font-family: var(--mono); margin-top: 8px; }
+.topo-left, .topo-right { height: calc(100vh - 200px); min-height: 480px; max-height: none; }
+.topo-right { background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px;
+  display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto; }
+.topo-row span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-host, .c-vendor { text-overflow: ellipsis; }
+.topo-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.topo-listfilter { flex: 1 1 100%; font-family: var(--mono); font-size: 12px;
+  padding: 8px 12px; background: var(--bg-0); border: 1px solid var(--line);
+  border-radius: var(--radius-sm); color: var(--ink-1); outline: none; }
+.topo-listfilter:focus { border-color: var(--accent); }
+.topo-chip { font-family: var(--mono); font-size: 11px; padding: 6px 12px; border-radius: 13px;
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--ink-2); cursor: pointer; }
+.topo-chip.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+.topo-select { font-family: var(--mono); font-size: 11px; padding: 6px 10px; background: var(--bg-0);
+  border: 1px solid var(--line); border-radius: 13px; color: var(--ink-2); }
+.topo-table { overflow-y: auto; overflow-x: hidden; flex: 1; }
+.topo-row { display: grid; grid-template-columns: 20px minmax(70px, 1.2fr) minmax(80px, 0.9fr) minmax(100px, 0.9fr) 58px minmax(90px, 1fr) minmax(70px, 0.8fr);
+  gap: 8px; align-items: center; padding: 5px 8px; font-family: var(--mono); font-size: 11px;
+  border-radius: 6px; cursor: pointer; }
+.topo-row:hover { background: var(--bg-2); }
+.topo-row.selected { outline: 1px solid var(--accent); }
+.topo-head-row { color: var(--ink-3); font-size: 10px; letter-spacing: 0.06em; cursor: default; position: sticky; top: 0;
+  background: var(--bg-1); z-index: 1; }
+.topo-row .c-host { color: var(--ink-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topo-row.offline .c-host, .topo-row.offline .c-ip, .topo-row.offline .c-mac { color: var(--ink-3); }
+.c-ip, .c-mac { color: var(--ink-2); }
+.c-lease { color: var(--ink-3); font-size: 10px; }
+.c-vendor { color: #7d8cff; }
+.c-src { color: var(--ink-3); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.dot.off { background: var(--ink-3); }
+.topo-group-row { color: #7d8cff; font-weight: bold; cursor: default; background: var(--bg-2); }
+.topo-detail { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 200;
+  display: flex; align-items: center; justify-content: center; }
+.topo-detail > .topo-detail-card { }
+#topo-detail .topo-detail-inner { background: var(--bg-1); border: 1px solid var(--line-strong);
+  border-radius: 14px; padding: 22px 26px; width: min(560px, calc(100vw - 40px));
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6); max-height: 82vh; overflow-y: auto; }
+.topo-detail-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.topo-detail-head h4 { margin: 0; color: var(--ink-1); font-size: 15px; }
+.topo-host-link { color: var(--accent); text-decoration: none; border-bottom: 1px dashed var(--accent); }
+.topo-host-link:hover { text-decoration: underline; }
+.topo-host-link::after { content: " ↗"; font-size: 11px; opacity: 0.7; }
+.topo-vpn-tag { font-size: 10px; color: #7d8cff; border: 1px solid #7d8cff; border-radius: 4px;
+  padding: 1px 5px; margin-left: 8px; vertical-align: middle; }
+.topo-detail h4 { margin: 0 0 10px; color: var(--ink-1); font-size: 14px; }
+.topo-detail .kv { display: grid; grid-template-columns: 140px 1fr; gap: 4px 14px; color: var(--ink-2); }
+.topo-detail .kv b { color: var(--ink-1); font-weight: normal; }
+.settings-check { display: flex; gap: 8px; align-items: center; font-family: var(--mono); font-size: 12px; color: var(--ink-1); }
 </style>
 </head>
 <body>
@@ -656,6 +746,7 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
   <div class="clock"><span id="clock-date">—</span><span class="sep">│</span><span id="clock-time">—</span></div>
   <span class="sync-chip" id="sync-chip" title="Speicherstatus">…</span>
   <button class="btn icon-btn search-toggle" id="btn-search-toggle" title="Suche einblenden" aria-label="Suche">⌕</button>
+  <button class="btn icon-btn" id="btn-topology" title="Netzwerk-Topologie">⌖</button>
   <button class="btn icon-btn" id="btn-edit" title="Bearbeiten">✎</button>
   <button class="btn icon-btn" id="btn-settings" title="Einstellungen öffnen" aria-haspopup="dialog">⚙</button>
 </header>
@@ -666,6 +757,42 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
 </div>
 
 <main class="wrap" id="board"></main>
+<!-- ============ TOPOLOGY VIEW (Phase 1) ============ -->
+<section id="topology-view" style="display:none" aria-label="ARP-Tabelle & IP-Verteilung">
+  <div class="topo-head">
+    <div class="topo-title"><span class="topo-accent">//</span> <span id="lbl-topo-title">ARP-TABELLE &amp; IP-VERTEILUNG</span>
+      <span class="topo-status" id="topo-status">…</span>
+    </div>
+    <div class="topo-actions">
+      <button class="btn" id="btn-topo-rescan">⟳ <span id="lbl-topo-rescan">Aktualisieren</span></button>
+      <button class="btn" id="btn-topo-close">✕</button>
+    </div>
+  </div>
+  <div class="topo-grid">
+    <div class="topo-left">
+      <canvas id="topo-canvas" width="100" height="100"></canvas>
+      <div class="topo-hint" id="lbl-topo-hint">Bereich anklicken zum Aufklappen · Gerät klicken für Details</div>
+    </div>
+    <div class="topo-right">
+      <div class="topo-filters">
+        <input type="search" class="topo-listfilter" id="topo-f-text" autocomplete="off"
+               placeholder="Filter: IP / MAC / Hostname / Lease-Typ / Hersteller …">
+        <button class="topo-chip active" data-filter="all" id="topo-f-all">alle (<span id="topo-n-all">0</span>)</button>
+        <button class="topo-chip" data-filter="online" id="topo-f-online">nur online</button>
+        <select class="topo-select" id="topo-f-area"><option value="">bereich: alle</option></select>
+        <select class="topo-select" id="topo-f-vendor"><option value="">hersteller: alle</option></select>
+      </div>
+      <div class="topo-table" id="topo-table" role="list">
+        <div class="topo-row topo-head-row">
+          <span class="c-st">ST</span><span class="c-host">HOSTNAME</span><span class="c-ip">IP</span>
+          <span class="c-mac">MAC</span><span class="c-vendor">HERSTELLER</span><span class="c-src">QUELLEN</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="topo-detail" id="topo-detail" style="display:none"></div>
+</section>
+
 <div class="no-results" id="no-results">keine Treffer — Suchbegriff anpassen</div>
 
 <div class="addgroup-wrap" style="max-width:1440px;margin:0 auto;padding:0 28px;position:relative;z-index:1;">
@@ -716,6 +843,7 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
       <button class="settings-tab active" id="tab-appearance" type="button" role="tab">Erscheinungsbild</button>
       <button class="settings-tab" id="tab-branding" type="button" role="tab">Branding</button>
       <button class="settings-tab" id="tab-immich" type="button" role="tab">Immich</button>
+      <button class="settings-tab" id="tab-topology" type="button" role="tab">ARP/IP</button>
       <button class="settings-tab" id="tab-data" type="button" role="tab">Daten</button>
       <button class="settings-tab" id="tab-info" type="button" role="tab">Info</button>
     </div>
@@ -855,6 +983,31 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
     </div>
 
     </div><!-- /pane-immich -->
+    <div class="settings-pane" id="pane-topology">
+      <div class="settings-section">
+        <div class="settings-label" id="lbl-topo-src">Geräte-Quellen</div>
+        <div class="settings-field">
+          <span class="settings-field-name" id="lbl-topo-opnsense">OPNsense (API)</span>
+          <input id="set-topo-opnsense-url" type="text" placeholder="https://opnsense.lan" autocomplete="off">
+          <input id="set-topo-opnsense-key" type="password" placeholder="API-Key" autocomplete="new-password">
+          <input id="set-topo-opnsense-secret" type="password" placeholder="API-Secret" autocomplete="new-password">
+          <div class="hint" id="lbl-topo-opnsense-hint">Key/Secret bleiben auf dem Server (write-only)</div>
+        </div>
+        <div class="settings-actions">
+          <button class="btn" id="btn-topo-opnsense-test">Verbindung testen</button>
+          <span class="hint" id="topo-opnsense-status"></span>
+        </div>
+        <div class="settings-field">
+          <span class="settings-field-name" id="lbl-topo-mdns">mDNS (passiv)</span>
+          <label class="settings-check"><input type="checkbox" id="set-topo-mdns-enabled"> <span id="lbl-topo-mdns-on">Empfangen von mDNS-Broadcasts aktivieren</span></label>
+        </div>
+        <div class="settings-actions">
+          <button class="btn primary" id="btn-topo-save">Speichern</button>
+          <span class="hint" id="topo-save-status"></span>
+        </div>
+      </div>
+    </div><!-- /pane-topology -->
+
 
     <div class="settings-pane" id="pane-data">
     <div class="settings-section">
@@ -874,7 +1027,7 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
         <div class="settings-label" id="lbl-info-title">Informationen</div>
         <div class="info-row">
           <span class="info-key" id="info-version-key">Version</span>
-          <span class="info-value">1.8.0</span>
+          <span class="info-value">1.10.0-alpha</span>
         </div>
         <div class="info-row">
           <span class="info-key" id="info-repo-key">GitHub-Repository</span>
@@ -912,8 +1065,9 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
 
 <div class="toast" id="toast"></div>
 
-<script src="/bg.js" defer></script>
-<script src="/i18n.js" defer></script>
-<script src="/app.js" defer></script>
+<script src="/bg.js?v=1100a" defer></script>
+<script src="/i18n.js?v=1100a" defer></script>
+<script src="/app.js?v=1100a" defer></script>
+<script src="/topology.js?v=1100a-fix26" defer></script>
 </body>
 </html>

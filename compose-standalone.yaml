@@ -18,6 +18,10 @@ services:
       # IMMICH_ALBUM: Backgrounds
       # IMMICH_INTERVAL: "3600"
       # IMMICH_API_KEY_FILE: /run/secrets/immich_key
+      # Optional — Network topology sources (or configure in the ⚙ settings GUI):
+      # OPNSENSE_URL: https://opnsense.lan
+      # OPNSENSE_API_KEY: your-api-key
+      # OPNSENSE_API_SECRET: your-api-secret
       ZENTRIX_DATA_FILE: /data/links.json
     volumes:
       - /opt/zentrix/data:/data

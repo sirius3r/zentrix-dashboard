@@ -221,6 +221,22 @@ function applyI18n() {
   }
   const lblFor = (id, txt) => { const el = $id(id); if (el) el.textContent = txt; };
   lblFor("modal-title", editingLink ? t("modal_edit_title") : t("modal_add_title"));
+  /* topology view (ARP-Tabelle & IP-Verteilung) */
+  lblFor("lbl-topo-title", t("topo_title", "ARP-TABELLE & IP-VERTEILUNG"));
+  lblFor("lbl-topo-rescan", t("topo_rescan", "Aktualisieren"));
+  lblFor("lbl-topo-hint", t("topo_hint", "Bereich anklicken zum Aufklappen · Gerät klicken für Details"));
+  const topoFilter = $id("topo-f-text"); if (topoFilter) topoFilter.placeholder = t("topo_filter_ph", "Filter: IP / MAC / Hostname / Lease-Typ / Hersteller …");
+  const topoAll = $id("topo-f-all"); if (topoAll) { const n = $id("topo-n-all"); topoAll.childNodes[0] && (topoAll.childNodes[0].textContent = t("topo_all", "alle") + " ("); }
+  const topoOnline = $id("topo-f-online"); if (topoOnline) topoOnline.textContent = t("topo_online", "nur online");
+  const topoArea = $id("topo-f-area"); if (topoArea && topoArea.options[0]) topoArea.options[0].textContent = t("topo_area_all", "bereich: alle");
+  const topoVendor = $id("topo-f-vendor"); if (topoVendor && topoVendor.options[0]) topoVendor.options[0].textContent = t("topo_vendor_all", "hersteller: alle");
+  /* topo table headers */
+  const topoHead = document.querySelector("#topo-table .topo-head-row");
+  if (topoHead) {
+    const heads = [t("topo_col_st", "ST"), t("topo_col_host", "HOSTNAME"), t("topo_col_ip", "IP"),
+                   t("topo_col_mac", "MAC"), t("topo_col_vendor", "HERSTELLER"), t("topo_col_src", "QUELLEN")];
+    topoHead.querySelectorAll("span").forEach((sp, i2) => { if (heads[i2]) sp.textContent = heads[i2]; });
+  }
   /* modal labels */
   const fNameLabel = document.querySelector('label[for="f-name"]'); if (fNameLabel) fNameLabel.textContent = t("label_name");
   const fUrlLabel = document.querySelector('label[for="f-url"]'); if (fUrlLabel) fUrlLabel.textContent = t("label_url");
@@ -314,7 +330,7 @@ function applyI18n() {
   }
   const btnSettingsClose = $id("btn-settings-close"); if (btnSettingsClose) btnSettingsClose.textContent = t("btn_close");
   /* settings tabs */
-  const tabNames = { "tab-appearance": t("set_appearance"), "tab-branding": t("tab_branding_short"), "tab-immich": t("tab_immich"), "tab-data": t("set_data"), "tab-info": t("set_info") };
+  const tabNames = { "tab-appearance": t("set_appearance"), "tab-branding": t("tab_branding_short"), "tab-immich": t("tab_immich"), "tab-topology": t("tab_topologie"), "tab-data": t("set_data"), "tab-info": t("set_info") };
   for (const [tid, label] of Object.entries(tabNames)) {
     const el = $id(tid); if (el) el.textContent = label;
   }
@@ -1219,6 +1235,7 @@ const SETTINGS_TABS = {
   appearance: { tab: "tab-appearance", pane: "pane-appearance" },
   branding:   { tab: "tab-branding",   pane: "pane-branding" },
   immich:     { tab: "tab-immich",     pane: "pane-immich" },
+  topology:   { tab: "tab-topology",   pane: "pane-topology" },
   data:       { tab: "tab-data",       pane: "pane-data" },
   info:       { tab: "tab-info",       pane: "pane-info" },
 };

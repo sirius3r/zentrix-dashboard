@@ -28,6 +28,7 @@ static files plus a small Python backend.
 14. [Docker operation](#14-docker-operation)
 15. [TLS / reverse proxy](#15-tls--reverse-proxy)
 16. [Troubleshooting](#16-troubleshooting)
+17. [ARP table & IP distribution](#17-arp-table--ip-distribution)
 
 ---
 
@@ -441,3 +442,52 @@ front (OPNsense Acme, Caddy, nginx, Traefik) pointing at
 | Animation too wild/quiet | Pick another background; OS `prefers-reduced-motion` is respected |
 | Language should be different | ⚙ → Appearance tab → Language; stored per browser |
 | Server errors in wrong language | Frontend sends its language on save; direct API calls honor `?lang=` and `Accept-Language` |
+---
+
+## 17. ARP table & IP distribution
+
+The **⌖** button in the topbar opens the *ARP table & IP distribution* view —
+a live picture of every device your router currently knows, grouped by
+network area.
+
+### 17.1 Reading the left panel
+
+- **`// CORE` card** — your router (e. g. OPNsense) with the number of
+  recognized interfaces and areas.
+- **Interface cards (left column)** — one card per configured interface,
+  sorted ascending by IP range: interface type (`LAN`, `WAN`, `VPN`, …),
+  name and IP/subnet. Pseudo-interfaces (loopback, `pfsync0`, …) are hidden.
+- **Area cards (right column)** — the device groups behind those interfaces:
+  area name, `online/total` counter and a badge with the device count. Click
+  a card to expand the matching rows in the device list.
+- A thin **connector line** links each interface to *its* area — the pairing
+  is resolved via subnet, so what sits side by side belongs together.
+
+### 17.2 The device list (right panel)
+
+- **Filter line** — matches substrings of IP, MAC, hostname, lease type and
+  vendor while you type.
+- **Chips** — `all (n)` / `online only`; **dropdowns** for area and vendor.
+- **Columns** — status dot (green = online, grey = offline), hostname, IP,
+  MAC, vendor (IEEE OUI), sources (e. g. `opnsense`, `mdns`) and lease type.
+- Devices whose lease TTL expired stay listed (offline) so you can see ghost
+  devices; static hosts without any DHCP lease appear via the ARP table.
+
+### 17.3 Device details
+
+Click a device row to open the **detail overlay**: identity (clickable
+hostname/IP — opens in a new browser tab like the dashboard links), status,
+sources, confidence, last seen, and the full lease record (type, period,
+remaining time, router interface). VPN peers additionally show handshake age
+and transfer counters (WireGuard) or session info (OpenVPN/IPsec).
+
+### 17.4 Behavior
+
+- Data refreshes automatically every **30 s**; the header status line shows
+  the current source states (`●` ok, `⚠` degraded, `○` disabled).
+- Everything is **read-only**: the dashboard never sends configuration to the
+  router.
+- Required OPNsense privileges — see the README section *Network topology*:
+  **Diagnostics: ARP Table** and **Diagnostics: Network Insight** (plus DHCP
+  lease read access for lease data).
+

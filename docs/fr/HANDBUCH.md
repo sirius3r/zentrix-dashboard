@@ -29,6 +29,7 @@ backend Python.
 14. [Fonctionnement Docker](#14-fonctionnement-docker)
 15. [TLS / reverse proxy](#15-tls--reverse-proxy)
 16. [Dépannage](#16-dépannage)
+17. [Table ARP & répartition IP](#17-table-arp--répartition-ip)
 
 ---
 
@@ -454,3 +455,57 @@ devant (OPNsense Acme, Caddy, nginx, Traefik) pointant vers
 | Animation trop agitée/calme | Choisir un autre fond ; `prefers-reduced-motion` de l'OS est respecté |
 | Langue à changer | ⚙ → onglet Apparence → Langue ; mémorisé par navigateur |
 | Erreurs serveur dans la mauvaise langue | Le frontend envoie sa langue à l'enregistrement ; les appels API directs respectent `?lang=` et `Accept-Language` |
+---
+
+## 17. Table ARP & répartition IP
+
+Le bouton **⌖** de la barre supérieure ouvre la vue *Table ARP &
+répartition IP* — une image en direct de tous les équipements connus du
+routeur, regroupés par zone réseau.
+
+### 17.1 Lire le panneau de gauche
+
+- **Carte `// CORE`** — le routeur (ex. OPNsense) avec le nombre d'interfaces
+  et de zones reconnues.
+- **Cartes d'interfaces (colonne de gauche)** — une carte par interface
+  configurée, triées par plage IP croissante : type (`LAN`, `WAN`, `VPN`, …),
+  nom et IP/sous-réseau. Les pseudo-interfaces (loopback, `pfsync0`, …) sont
+  masquées.
+- **Cartes de zones (colonne de droite)** — les groupes d'équipementsderrière
+  les interfaces : nom de zone, compteur `en ligne/total` et badge du nombre
+  d'équipements. Cliquer une carte déplie les lignes correspondantes.
+- Une fine **ligne de liaison** relie chaque interface à *sa* zone —
+  l'association est résolue par sous-réseau : ce qui est côte à côte va
+  ensemble.
+
+### 17.2 La liste des équipements (panneau de droite)
+
+- **Ligne de filtre** — filtre en direct sur des fragments d'IP, MAC, nom
+  d'hôte, type de bail et fabricant.
+- **Pastilles** — `tous (n)` / `en ligne uniquement` ; **listes** pour zone
+  et fabricant.
+- **Colonnes** — point d'état (vert = en ligne, gris = hors ligne), nom
+  d'hôte, IP, MAC, fabricant (IEEE OUI), sources (ex. `opnsense`, `mdns`) et
+  type de bail.
+- Les équipements dont le bail a expiré restent listés (hors ligne) — les
+  hôtes statiques sans bail DHCP apparaissent via la table ARP.
+
+### 17.3 Détails d'un équipement
+
+Cliquer une ligne ouvre la **fenêtre de détails** : identité (nom/IP
+cliquable — ouvre un nouvel onglet comme les liens du tableau de bord),
+état, sources, confiance, dernière détection et l'enregistrement de bail
+complet (type, période, temps restant, interface du routeur). Les pairs VPN
+affichent en plus l'âge du handshake et les compteurs de transfert
+(WireGuard) ou les infos de session (OpenVPN/IPsec).
+
+### 17.4 Comportement
+
+- Les données se rafraîchissent toutes les **30 s** ; la ligne d'état montre
+  l'état des sources (`●` ok, `⚠` dégradé, `○` désactivé).
+- Tout est en **lecture seule** : le tableau de bord n'écrit jamais dans le
+  routeur.
+- Privilèges OPNsense requis — voir la section README *Network topology* :
+  **Diagnostics: ARP Table** et **Diagnostics: Network Insight** (plus l'accès
+  en lecture aux baux DHCP).
+
