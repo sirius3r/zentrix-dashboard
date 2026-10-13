@@ -265,6 +265,7 @@ function applyI18n() {
   /* settings modal */
   const settingsTitle = $id("settings-title"); if (settingsTitle) settingsTitle.textContent = t("settings_title");
   const lblAppearance = $id("lbl-appearance"); if (lblAppearance) lblAppearance.textContent = t("set_appearance");
+  const favHint = $id("lbl-fav-hint"); if (favHint) favHint.textContent = t("fav_default_hint", "PNG/ICO/SVG, max 256 KB — Standard: großes rotes Z");
   const lblTheme = $id("lbl-theme"); if (lblTheme) lblTheme.textContent = t("set_theme");
   const lblBackground = $id("lbl-background"); if (lblBackground) lblBackground.textContent = t("set_background");
   const lblClock = $id("lbl-clock"); if (lblClock) lblClock.textContent = t("set_clock");

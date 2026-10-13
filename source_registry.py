@@ -114,6 +114,32 @@ class SourceRegistry:
             self._remerge()
 
     # -- topology 2.0: interfaces + vpn branches ---------------------------------
+    # -- public IP (external echo service, cached 10 min) --------------------------
+    _pub_ip_cache = {"ip": None, "at": 0.0}
+
+    def fetch_public_ip(self):
+        """Öffentliche IP via externem Echo-Dienst (NICHT aus der WAN-Schnittstelle).
+        10 min Cache; Fehler → None (UI zeigt —). Getrennt von Router-Quellen."""
+        import re as _re
+        c = self._pub_ip_cache
+        if time.time() - c["at"] < 600 and c["ip"]:
+            return c["ip"]
+        from sources_config import get_public_ip_url
+        url = get_public_ip_url()
+        if not url:
+            return None
+        import urllib.request as _u
+        try:
+            with _u.urlopen(url, timeout=5) as resp:
+                text = resp.read(512).decode("utf-8", "replace")
+            m = _re.search(r"(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})", text)
+            if m:
+                c["ip"], c["at"] = m.group(1), time.time()
+                return c["ip"]
+        except Exception:
+            pass
+        return None
+
     def fetch_topology_data(self) -> dict:
         """Pull interfaces + vpn branches from the first capable source (spec §3).
         Read-only; errors per branch isolated — fehlende Module liefern leere Zweige."""
@@ -147,6 +173,7 @@ class SourceRegistry:
                 if d.raw and (d.raw.get("vpn_type") or d.address_source == "vpn"):
                     devs.append(d)
         return {"interfaces": interfaces,
+                "public_ip": self.fetch_public_ip(),
                 "vpn": {"branches": vpn_branches,
                         "devices": [{"mac": d.mac, "ip": d.ip, "hostname": d.hostname,
                                      "interface_type": d.interface_type,
@@ -174,7 +201,7 @@ class SourceRegistry:
                           ("man", "starts", "ends", "descr", "if_descr")
                           if (d.raw or {}).get(k)},
                 "vpn": {k: (d.raw or {}).get(k) for k in
-                        ("vpn_type", "pubkey", "handshake", "transfer-rx", "transfer-tx",
+                        ("vpn_type", "pubkey", "handshake", "handshake_ts", "transfer-rx", "transfer-tx",
                          "real_address", "connected_since", "peer")
                         if (d.raw or {}).get(k) is not None},
             })

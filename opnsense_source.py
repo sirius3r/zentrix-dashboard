@@ -370,16 +370,29 @@ class OpnSenseSource:
                 status = rec.get("peer-status", "")
                 active = status == "online"
                 tunnel_ip = (rec.get("allowed-ips") or "").split(",")[0].split("/")[0].strip()
+                hs = rec.get("latest-handshake-epoch")
+                hs_ts = rec.get("latest-handshake")
+                if not hs and hs_ts:
+                    # Fallback: unix-Sekunden → lesbare Zeit
+                    # (Peers ohne epoch, aber mit letztem Handshake)
+                    try:
+                        from datetime import datetime
+                        hs = datetime.fromtimestamp(int(hs_ts)).strftime("%Y-%m-%d %H:%M:%S")
+                    except (ValueError, TypeError, OSError):
+                        hs = None
                 try:
                     d = Device.from_raw(self.source_id, mac=None, ip=tunnel_ip or None,
                                         hostname=name, active=active if status else None,
                                         address_source="vpn", interface_type="wireguard",
                                         area_hint="vpn",
                                         raw={"vpn_type": "wireguard", "pubkey": pubkey,
-                                             "handshake": rec.get("latest-handshake-epoch"),
+                                             "handshake": hs,
+                                             "handshake_ts": int(hs_ts) if hs_ts else None,
                                              "if": rec.get("if"),
                                              "transfer-rx": rec.get("transfer-rx"),
                                              "transfer-tx": rec.get("transfer-tx")})
+                except SourceError:
+                    continue  # peer ohne Tunnel-IP → nur Zweig-Daten
                 except SourceError:
                     continue  # peer ohne Tunnel-IP → nur Zweig-Daten
                 d._caps = frozenset(self.capabilities)

@@ -125,6 +125,11 @@ Data sources (⚙ → ARP/IP):
   Zentrix server (write-only fields, never sent to the browser).
 - **mDNS (passive)** — listens to UDP 5353 broadcasts, no queries sent.
 
+**Public IP:** the WAN card shows the real public IP, resolved via an
+external echo service (default: `http://checkip.dyndns.org/`, 10-minute
+cache). Override with `ZENTRIX_PUBLIC_IP_URL` (or `ZENTRIX_PUBLIC_IP_URL_FILE`,
+or `public_ip_url` in `sources.json`); the value `-` disables the lookup.
+
 > **Required OPNsense privileges** (System → Access → Users → ✎ →
 > *Privileges*): **Diagnostics: ARP Table** and **Diagnostics:Network
 > Insight**. DHCP lease data additionally needs the lease read permission of

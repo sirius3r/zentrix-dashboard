@@ -111,6 +111,12 @@ topologie en direct. Sources de données (⚙ → ARP/IP) :
 - **mDNS (passif)** — écoute les diffusions UDP 5353 sans envoyer de
   requêtes.
 
+**IP publique :** la carte WAN affiche la vraie IP publique, résolue via un
+service d'écho externe (défaut : `http://checkip.dyndns.org/`, cache de
+10 minutes). Surchargeable avec `ZENTRIX_PUBLIC_IP_URL` (ou
+`ZENTRIX_PUBLIC_IP_URL_FILE`, ou `public_ip_url` dans `sources.json`) ; la
+valeur `-` désactive la requête.
+
 > **Privilèges OPNsense requis** (System → Access → Users → ✎ →
 > *Privilèges*) : **Diagnostics: ARP Table** et **Diagnostics: Network
 > Insight**. Les données de baux DHCP nécessitent en plus la permission de

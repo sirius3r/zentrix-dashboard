@@ -4,7 +4,7 @@
    list. German/English labels via ZENTRIX_I18N (topo_* keys). */
 (function () {
   "use strict";
-  const TOPO_JS_VERSION = "1.10.0-alpha-fix26";  /* visible in settings pane for cache debugging */
+  const TOPO_JS_VERSION = "1.10.0-alpha-fix28";  /* visible in settings pane for cache debugging */
   const $ = (s) => document.querySelector(s);
   const VIEW = $("#topology-view");
   const CANVAS = $("#topo-canvas");
@@ -70,8 +70,8 @@
     const n = data.devices.length;
     const on = data.devices.filter((d) => d.active !== false).length;
     const bits = [];
-    bits.push(n + " Geräte");
-    bits.push(on + " online");
+    bits.push(n + " " + t("topo_mb_count", "Geräte"));
+    bits.push(on + " " + t("topo_d_online", "online"));
     if (parts.length) bits.push(parts.join(" "));
     const st = $("#topo-status");
     st.textContent = bits.join(" · ");
@@ -82,7 +82,7 @@
 
   /* ---------------- device list ---------------- */
   function leaseLabel(d) {
-    if (d.address_source === "static") return "statisch";
+    if (d.address_source === "static") return t("topo_d_lt_static", "statisch");
     if (d.address_source === "dhcp") return "DHCP";
     if (d.address_source === "vpn" || (d.raw || {}).vpn_type) {
       const t = (d.raw || {}).vpn_type || d.interface_type || "vpn";
@@ -128,15 +128,15 @@
     const rows = [];
     if (textFilter.trim()) {
       rows.push(`<div class="topo-row topo-group-row"><span class="c-st">⌕</span>` +
-        `<span class="c-host">${arr.length} von ${data.devices.length} Geräten — „${esc(textFilter.trim())}“</span>` +
+        `<span class="c-host">${arr.length} ${t("topo_mb_count", "Geräte")} ${t("topo_of", "von")} ${data.devices.length} — „${esc(textFilter.trim())}“</span>` +
         `<span class="c-ip"></span><span class="c-mac"></span><span class="c-lease"></span><span class="c-vendor"></span><span class="c-src"></span></div>`);
     }
-    rows.push(`<div class="topo-row topo-head-row"><span class="c-st">ST</span><span class="c-host">HOSTNAME</span>` +
-      `<span class="c-ip">IP</span><span class="c-mac">MAC</span><span class="c-lease">LEASE</span><span class="c-vendor">HERSTELLER</span><span class="c-src">QUELLEN</span></div>`);
+    rows.push(`<div class="topo-row topo-head-row"><span class="c-st">${esc(t("topo_col_st", "ST"))}</span><span class="c-host">${esc(t("topo_col_host", "HOSTNAME"))}</span>` +
+      `<span class="c-ip">${esc(t("topo_col_ip", "IP"))}</span><span class="c-mac">${esc(t("topo_col_mac", "MAC"))}</span><span class="c-lease">LEASE</span><span class="c-vendor">${esc(t("topo_col_vendor", "HERSTELLER"))}</span><span class="c-src">${esc(t("topo_col_src", "QUELLEN"))}</span></div>`);
     for (const [area, devs] of groups) {
       const on = devs.filter((d) => d.active !== false).length;
       rows.push(`<div class="topo-row topo-group-row" data-area="${esc(area)}"><span class="c-st">▸</span>` +
-        `<span class="c-host">${esc(area)} — ${devs.length} Geräte · ${on} online</span>` +
+        `<span class="c-host">${esc(area)} — ${devs.length} ${t("topo_mb_count", "Geräte")} · ${on} ${t("topo_d_online", "online")}</span>` +
         `<span class="c-ip"></span><span class="c-mac"></span><span class="c-lease"></span><span class="c-vendor"></span><span class="c-src"></span></div>`);
       for (const d of devs) {
         const k = deviceKey(d);
@@ -144,7 +144,7 @@
         const srcs = ((d.sources || [])).join("·");
         rows.push(`<div class="topo-row${online ? "" : " offline"}${k === selectedKey ? " selected" : ""}" data-key="${esc(k)}">` +
           `<span class="c-st"><span class="dot${online ? "" : " off"}"></span></span>` +
-          `<span class="c-host">${esc(d.hostname || (d.vendor ? d.vendor + " (kein Hostname)" : null) || d.ip || "(unbekannt)")}</span>` +
+          `<span class="c-host">${esc(d.hostname || (d.vendor ? d.vendor + " (" + t("topo_no_host", "kein Hostname") + ")" : null) || d.ip || "(" + t("topo_d_unknown", "unbekannt") + ")")}</span>` +
           `<span class="c-ip">${esc(d.ip || "—")}</span>` +
           `<span class="c-mac">${esc(d.mac || "—")}</span>` +
           `<span class="c-lease">${esc(leaseLabel(d))}</span>` +
@@ -156,8 +156,8 @@
     // fill vendor + area selects once
     const areas = [...new Set(data.devices.map(areaOf))].sort();
     const vendors = [...new Set(data.devices.map((d) => d.vendor || "?"))].sort();
-    fillSelect($("#topo-f-area"), areas, "bereich: alle", filter.area);
-    fillSelect($("#topo-f-vendor"), vendors, "hersteller: alle", filter.vendor);
+    fillSelect($("#topo-f-area"), areas, t("topo_area_all", "bereich: alle"), filter.area);
+    fillSelect($("#topo-f-vendor"), vendors, t("topo_vendor_all", "hersteller: alle"), filter.vendor);
     $("#topo-n-all").textContent = String(data.devices.length);
   }
 
@@ -197,7 +197,17 @@
     const raw = d.raw || {};
     const vpn = d.vpn || {};
     if (vpn.vpn_type === "wireguard" || (raw.vpn_type === "wireguard")) {
-      kv.push([t("topo_d_wg_hs", "WireGuard Handshake"), vpn.handshake || raw.handshake || "—"]);
+      const hsTs = vpn.handshake_ts ?? raw.handshake_ts ?? null;
+      let hsVal = vpn.handshake || raw.handshake || "";
+      if (hsTs) {
+        const ago = Math.max(0, Math.floor(Date.now() / 1000 - Number(hsTs)));
+        const agoStr = ago < 90 ? t("topo_d_ago_s", "vor {n} s").replace("{n}", ago)
+          : ago < 86400 ? t("topo_d_ago_min", "vor {n} min").replace("{n}", Math.round(ago / 60))
+          : t("topo_d_ago_d", "vor {n} d").replace("{n}", Math.round(ago / 86400));
+        hsVal = hsVal ? hsVal + " · " + agoStr : agoStr;
+      }
+      if (!hsVal) hsVal = t("topo_d_never", "nie");
+      kv.push([t("topo_d_wg_hs", "WireGuard Handshake"), hsVal]);
       const rx = vpn["transfer-rx"] ?? raw["transfer-rx"];
       const tx = vpn["transfer-tx"] ?? raw["transfer-tx"];
       if (rx != null) kv.push([t("topo_d_wg_rx", "WireGuard RX"), Math.round(rx / 1048576) + " MB"]);
@@ -222,7 +232,7 @@
           ` title="${esc(t("topo_open_new_tab", "In neuem Tab öffnen"))}">${esc(titleName)}</a>`
         : esc(titleName)) +
       (isVpn ? ` <span class="topo-vpn-tag">${esc((raw.vpn_type || "vpn").toUpperCase())}</span>` : "") +
-      `</h4><button class="btn icon-btn" id="topo-detail-close" title="Schließen">✕</button></div>` +
+      `</h4><button class="btn icon-btn" id="topo-detail-close" title="${esc(t("topo_close", "Schließen"))}">✕</button></div>` +
       `<div class="kv">` + kv.map(([k, v]) => `<span>${esc(k)}</span><b>${esc(v)}</b>`).join("") + `</div></div>`;
     DETAIL.style.display = "flex";
     const c = document.getElementById("topo-detail-close");
@@ -237,6 +247,7 @@
       if (!res.ok) return;
       const view = await res.json();
       graphData.interfaces = view.interfaces || [];
+      graphData.public_ip = view.public_ip || null;
       graphData.vpn = view.vpn || { branches: {}, devices: [] };
       if (open) drawGraph();
       renderVpnDevices();
@@ -345,7 +356,7 @@
     ctx.font = `${11*fs}px 'JetBrains Mono', monospace`;
     ctx.fillStyle = ink3;
     const ifs = graphData.interfaces || [];
-    ctx.fillText((ifs.length || "?") + " Interfaces · " + graphData.areas.length + " Bereiche", core.x + 12, core.y + 56);
+    ctx.fillText((ifs.length || "?") + " " + t("topo_n_if", "Interfaces") + " · " + graphData.areas.length + " " + t("topo_n_areas", "Bereiche"), core.x + 12, core.y + 56);
 
     /* Zeilen = Paare (Interface + SEIN Bereich), aufsteigend nach IP-Bereich sortiert */
     const firstIfY = core.y + core.h + 24;
@@ -362,7 +373,12 @@
         ctx.fillText((ifc.descr || ifc.name).slice(0, 14), box.x + 58, box.y + 14);
         ctx.font = `${10*fs}px 'JetBrains Mono', monospace`;
         ctx.fillStyle = ink3;
-        ctx.fillText((ifc.ipaddr || "—").slice(0, 21), box.x + 12, box.y + 28);
+        const isWan = ifc.kind === "wan";
+        const pubIp = graphData.public_ip || null;
+        const line2 = isWan && pubIp
+          ? (t("topo_public_ip", "Öffentliche IP") + ": " + pubIp)
+          : (ifc.ipaddr || "—");
+        ctx.fillText(line2.slice(0, 33), box.x + 12, box.y + 28);
         p._ifbox = box;
       }
       y += rowSpacing;
@@ -392,7 +408,7 @@
       ctx.fillText(a.name.slice(0, 14), box.x + 92, box.y + 14);
       ctx.font = `${10*fs}px 'JetBrains Mono', monospace`;
       ctx.fillStyle = ink3;
-      ctx.fillText(a.online + "/" + a.total + " online · aufklappen", box.x + 12, box.y + 28);
+      ctx.fillText(a.online + "/" + a.total + " " + t("topo_d_online", "online") + " · " + t("topo_expand", "aufklappen"), box.x + 12, box.y + 28);
       ctx.beginPath(); ctx.arc(box.x + box.w - 20, box.y + 17, 10, 0, Math.PI * 2);
       ctx.fillStyle = accent + "30"; ctx.fill();
       ctx.fillStyle = accent; ctx.textAlign = "center"; ctx.fillText(String(a.total), box.x + box.w - 20, box.y + 21);
@@ -403,7 +419,7 @@
 
         /* VPN-Zweige erscheinen als BEREICH-Karten (VPN · Typ) — keine doppelte Box. */
 
-    ctx.fillText("Auto-Poll 30 s · Quelle: OPNsense-API (Interfaces, Leases, VPN, mDNS passiv)", 20, H - 12);
+    ctx.fillText(t("topo_footer", "Auto-Poll 30 s · Quelle: OPNsense-API (Interfaces, Leases, VPN, mDNS passiv)"), 20, H - 12);
   }
 
 function roundRect(ctx, x, y, w, h, r, stroke, lw) {
@@ -562,7 +578,7 @@ function roundRect(ctx, x, y, w, h, r, stroke, lw) {
       });
       const r = await res.json();
       $("#topo-opnsense-status").textContent = r.ok
-        ? `✓ ${r.router_model || "OPNsense"} · ${r.device_count} Geräte · ${r.latency_ms} ms`
+        ? `✓ ${r.router_model || "OPNsense"} · ${r.device_count} ${t("topo_mb_count", "Geräte")} · ${r.latency_ms} ms`
         : "✗ " + (r.message || r.error_code || "Fehler");
     } catch (e) {
       $("#topo-opnsense-status").textContent = "✗ " + e.message;

@@ -104,6 +104,12 @@ Datenquellen (⚙ → ARP/IP):
 - **mDNS (passiv)** — empfängt UDP-5353-Broadcasts, ohne selbst Anfragen zu
   senden.
 
+**Öffentliche IP:** Die WAN-Karte zeigt die echte öffentliche IP, ermittelt
+über einen externen Echo-Dienst (Standard: `http://checkip.dyndns.org/`,
+10-Minuten-Cache). Überschreibbar mit `ZENTRIX_PUBLIC_IP_URL` (oder
+`ZENTRIX_PUBLIC_IP_URL_FILE`, oder `public_ip_url` in `sources.json`); der
+Wert `-` deaktiviert die Abfrage.
+
 > **Benötigte OPNsense-Berechtigungen** (System → Access → Users → ✎ →
 > *Berechtigungen*): **Diagnostics: ARP Table** und **Diagnostics: Network
 > Insight**. Für DHCP-Lease-Daten zusätzlich die Lese-Berechtigung des

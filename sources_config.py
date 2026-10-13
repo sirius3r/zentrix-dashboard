@@ -17,6 +17,35 @@ DEFAULTS = {
     "mdns": {"enabled": False, "poll_s": 300},
 }
 
+# Öffentliche IP: externer Echo-Dienst (KEINE Router-Abfrage — die WAN-IP der
+# OPNsense ist meist die private ISP-Seite). Default: checkip.dyndns.org (HTML-
+# Antwort; der IP-Regex extrahiert die Adresse zuverlässig). Konfigurierbar via sources.json
+# (public_ip_url) oder ENV ZENTRIX_PUBLIC_IP_URL(+_FILE); "" deaktiviert.
+PUBLIC_IP_DEFAULT = "http://checkip.dyndns.org/"
+
+
+def get_public_ip_url() -> str:
+    v = os.environ.get("ZENTRIX_PUBLIC_IP_URL", "").strip()
+    if not v:
+        fp = os.environ.get("ZENTRIX_PUBLIC_IP_URL_FILE", "").strip()
+        if fp:
+            try:
+                v = Path(fp).read_text().strip()
+            except OSError:
+                v = ""
+    if v == "-":
+        return ""          # explizit deaktiviert
+    if v == "":
+        try:
+            raw = json.loads(Path(__import__("os").environ.get(
+                "ZENTRIX_SOURCES_FILE", "/data/sources.json")).read_text(encoding="utf-8"))
+            v = str((raw or {}).get("public_ip_url", "") or "").strip()
+            if v == "-":
+                return ""
+        except (OSError, ValueError):
+            pass
+    return v or PUBLIC_IP_DEFAULT
+
 
 def _read_secret(env_name: str) -> str:
     """ENV value, or contents of <name>_FILE (docker secret pattern)."""
