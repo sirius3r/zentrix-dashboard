@@ -165,13 +165,14 @@ TLS).
 
 Configuration sur la FRITZ!Box (vérifiée sous FRITZ!OS) :
 
-1. **Activer l'accès apps** — Heimnetz → Netzwerk → *Erweiterte
-   Netzwerkeinstellungen ändern* → *Zugriff für Apps erlauben*
-   (activé par défaut).
-2. **Créer un utilisateur** — System → FRITZ!Box-Benutzer. Le droit
-   *FRITZ!Box Einstellungen* suffit ; attention : ce droit inclut
-   implicitement messagerie vocale, télécopies, FRITZ!App Fon, journal
-   d'appels et Smart Home.
+1. **Activer l'accès apps** — Réseau domestique → Réseau → *Modifier les
+   réglages réseau avancés* → *Autoriser l'accès pour les applications*
+   (activé par défaut ; interface allemande : Heimnetz → Netzwerk →
+   Erweiterte Netzwerkeinstellungen ändern → Zugriff für Apps erlauben).
+2. **Créer un utilisateur** — Système → *Utilisateurs FRITZ!Box* (interface
+   allemande : System → FRITZ!Box-Benutzer). Le droit *Réglages de la
+   FRITZ!Box* suffit ; attention : ce droit inclut implicitement messagerie
+   vocale, télécopies, FRITZ!App Fon, journal d'appels et Smart Home.
 
 La configuration se trouve dans `sources.json` dans le volume de données ;
 les réglages GUI priment sur les variables d'environnement (`OPNSENSE_URL`,

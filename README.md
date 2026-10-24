@@ -176,13 +176,15 @@ unencrypted on port 49000 (use `https://…:49443` for TLS).
 
 Setup on the FRITZ!Box (verified on FRITZ!OS):
 
-1. **Enable app access** — Heimnetz → Netzwerk → *Erweiterte
-   Netzwerkeinstellungen ändern* → *Zugriff für Apps erlauben*
-   (enabled by default).
-2. **Create a user** — System → FRITZ!Box-Benutzer. *FRITZ!Box
-   Einstellungen* is sufficient; be aware that this right implicitly
-   also grants voice messages, fax messages, FRITZ!App Fon, call list
-   and Smart Home access.
+1. **Enable app access** — Home Network → Network → *Advanced
+   Network Settings* → *Permit access for applications*
+   (enabled by default; German GUI: Heimnetz → Netzwerk → Erweiterte
+   Netzwerkeinstellungen ändern → Zugriff für Apps erlauben).
+2. **Create a user** — System → *FRITZ!Box Users* (German GUI:
+   System → FRITZ!Box-Benutzer). The *FRITZ!Box Settings* right is
+   sufficient; be aware that this right implicitly also grants voice
+   messages, fax messages, FRITZ!App Fon, call list and Smart Home
+   access.
 
 Configuration lives in `sources.json` in the data volume; GUI settings take
 precedence over environment variables (`OPNSENSE_URL`, `OPNSENSE_API_KEY`,
