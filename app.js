@@ -230,6 +230,37 @@ function applyI18n() {
   const topoOnline = $id("topo-f-online"); if (topoOnline) topoOnline.textContent = t("topo_online", "nur online");
   const topoArea = $id("topo-f-area"); if (topoArea && topoArea.options[0]) topoArea.options[0].textContent = t("topo_area_all", "bereich: alle");
   const topoVendor = $id("topo-f-vendor"); if (topoVendor && topoVendor.options[0]) topoVendor.options[0].textContent = t("topo_vendor_all", "hersteller: alle");
+  /* topology settings pane */
+  lblFor("lbl-topo-src", t("topo_src_label", "Geräte-Quellen"));
+  lblFor("lbl-topo-opnsense", "OPNsense (API)");
+  lblFor("lbl-topo-opnsense-hint", t("topo_opn_hint", "Key/Secret bleiben auf dem Server (write-only)"));
+  lblFor("lbl-topo-fritzbox", t("topo_fb_label", "FRITZ!Box (TR-064)"));
+  lblFor("lbl-topo-fb-hint", t("topo_fb_pw_hint", "Passwort bleibt auf dem Server (write-only) · nur im Heimnetz verwenden"));
+  const fbUserInp = $id("set-topo-fb-user"); if (fbUserInp) fbUserInp.placeholder = t("topo_fb_user", "Benutzer (nicht admin)");
+  const fbPwInp = $id("set-topo-fb-password"); if (fbPwInp) fbPwInp.placeholder = t("topo_fb_pw_field", "Passwort");
+  const fbTestBtn = $id("btn-topo-fb-test"); if (fbTestBtn) fbTestBtn.textContent = t("topo_test_btn", "Verbindung testen");
+  const opnTestBtn = $id("btn-topo-opnsense-test"); if (opnTestBtn) opnTestBtn.textContent = t("topo_test_btn", "Verbindung testen");
+  lblFor("lbl-topo-mdns", "mDNS (passiv)");
+  const mdnsOn = $id("lbl-topo-mdns-on"); if (mdnsOn) mdnsOn.textContent = t("topo_mdns_on", "Empfangen von mDNS-Broadcasts aktivieren");
+  /* ddns settings pane */
+  lblFor("lbl-ddns", t("ddns_lbl", "Dynamisches DNS (A-Record Updater)"));
+  lblFor("lbl-ddns-url", t("ddns_url", "Update-URL"));
+  lblFor("lbl-ddns-url-hint", t("ddns_url_hint", "Platzhalter: {ip} {host} {user} {pass} — ohne {user}:{pass} im URL werden Zugangsdaten als HTTP-Basic-Auth gesendet"));
+  lblFor("lbl-ddns-host", t("ddns_host", "Hostname (A-Record)"));
+  lblFor("lbl-ddns-iphost", t("ddns_iphost", "Öffentliche IP ermitteln über"));
+  lblFor("lbl-ddns-iphost-hint", t("ddns_iphost_hint", "leer = Dashboard-Standard"));
+  lblFor("lbl-ddns-user", t("ddns_user", "Benutzer"));
+  lblFor("lbl-ddns-pw", t("ddns_pw", "Passwort (write-only)"));
+  lblFor("lbl-ddns-pw-hint", t("ddns_pw_hint", "Passwort bleibt auf dem Server (write-only)"));
+  lblFor("lbl-ddns-check", t("ddns_check", "Prüfintervall (Sekunden)"));
+  lblFor("lbl-ddns-update", t("ddns_update", "Updateintervall (Sekunden, Mindestabstand)"));
+  lblFor("lbl-ddns-on", t("ddns_on", "DDNS-Updater aktivieren"));
+  lblFor("lbl-ddns-status", t("ddns_status", "Status"));
+  const ddnsTest = $id("btn-ddns-test"); if (ddnsTest) ddnsTest.textContent = t("ddns_test", "Verbindung testen");
+  const ddnsCheck = $id("btn-ddns-check"); if (ddnsCheck) ddnsCheck.textContent = t("ddns_check_now", "Jetzt prüfen");
+  const ddnsUpdate = $id("btn-ddns-update"); if (ddnsUpdate) ddnsUpdate.textContent = t("ddns_update_now", "Jetzt aktualisieren");
+  const ddnsSave = $id("btn-ddns-save"); if (ddnsSave) ddnsSave.textContent = t("btn_save");
+  const ddnsPwInp = $id("set-ddns-password"); if (ddnsPwInp) ddnsPwInp.placeholder = t("ddns_pw", "Passwort (write-only)");
   /* topo table headers */
   const topoHead = document.querySelector("#topo-table .topo-head-row");
   if (topoHead) {
@@ -331,7 +362,7 @@ function applyI18n() {
   }
   const btnSettingsClose = $id("btn-settings-close"); if (btnSettingsClose) btnSettingsClose.textContent = t("btn_close");
   /* settings tabs */
-  const tabNames = { "tab-appearance": t("set_appearance"), "tab-branding": t("tab_branding_short"), "tab-immich": t("tab_immich"), "tab-topology": t("tab_topologie"), "tab-data": t("set_data"), "tab-info": t("set_info") };
+  const tabNames = { "tab-appearance": t("set_appearance"), "tab-branding": t("tab_branding_short"), "tab-immich": t("tab_immich"), "tab-topology": t("tab_topologie"), "tab-ddns": t("ddns_tab", "DDNS"), "tab-data": t("set_data"), "tab-info": t("set_info") };
   for (const [tid, label] of Object.entries(tabNames)) {
     const el = $id(tid); if (el) el.textContent = label;
   }
@@ -1147,6 +1178,7 @@ function openSettings() {
 accentInput.value = settings.accent[settings.theme] || themeAccentHex();
   }
   loadImmichConfig();
+  loadDdnsConfig();
   applyI18n();
 }
 
@@ -1237,6 +1269,7 @@ const SETTINGS_TABS = {
   branding:   { tab: "tab-branding",   pane: "pane-branding" },
   immich:     { tab: "tab-immich",     pane: "pane-immich" },
   topology:   { tab: "tab-topology",   pane: "pane-topology" },
+    ddns:       { tab: "tab-ddns",       pane: "pane-ddns" },
   data:       { tab: "tab-data",       pane: "pane-data" },
   info:       { tab: "tab-info",       pane: "pane-info" },
 };
@@ -1257,6 +1290,90 @@ for (const [key, ids] of Object.entries(SETTINGS_TABS)) {
 $("#btn-settings-close").addEventListener("click", closeSettings);
 $("#settings-backdrop").addEventListener("click", (e) => { if (e.target === $("#settings-backdrop")) closeSettings(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSettings(); });
+
+
+/* ---- DDNS (A-Record Updater) configuration (DDNS tab) ----
+   Password is write-only: the server never returns it; the field stays empty
+   and shows a masked hint when a password is stored. */
+function loadDdnsConfig() {
+  fetch("/api/ddns/config", { headers: { "X-Auth-Token": getToken() }, credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((cfg) => {
+      if (!cfg) return;
+      const set = (id, v) => { const el = $(id); if (el) el.value = v ?? ""; };
+      set("#set-ddns-url", cfg.update_url); set("#set-ddns-host", cfg.host);
+      set("#set-ddns-iphost", cfg.ip_host); set("#set-ddns-user", cfg.user);
+      set("#set-ddns-check", cfg.check_s); set("#set-ddns-update", cfg.update_s);
+      const en = $("#set-ddns-enabled"); if (en) en.checked = !!cfg.enabled;
+      const pw = $("#set-ddns-password"); if (pw) { pw.value = ""; pw.placeholder = cfg.password_set ? t("ddns_pw_set", "gesetzt (••••)") : t("ddns_pw", "Passwort (write-only)"); }
+      refreshDdnsState();
+    })
+    .catch(() => {});
+}
+function refreshDdnsState() {
+  fetch("/api/ddns/state", { credentials: "same-origin" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((st) => {
+      const box = $("#ddns-state-box"); if (!box || !st) return;
+      const fmt = (ts) => ts ? new Date(ts * 1000).toLocaleString() : "—";
+      box.textContent =
+        (st.last_ip ? (t("ddns_st_ip", "Öffentliche IP") + ": " + st.last_ip + " · ") : "") +
+        (st.dns_ip ? (t("ddns_st_dns", "DNS A-Record") + ": " + st.dns_ip + " · ") : "") +
+        (t("ddns_st_lastchk", "Letzte Prüfung") + ": " + fmt(st.last_check) + " · ") +
+        (t("ddns_st_lastupd", "Letztes Update") + ": " + fmt(st.last_update)) +
+        (st.last_result_text ? " · " + t("ddns_st_result", "Ergebnis") + ": " + st.last_result_text : "");
+    })
+    .catch(() => {});
+}
+function saveDdnsConfig() {
+  const payload = {
+    enabled: !!($("#set-ddns-enabled") || {}).checked,
+    update_url: ($("#set-ddns-url") || {}).value || "",
+    host: ($("#set-ddns-host") || {}).value || "",
+    ip_host: ($("#set-ddns-iphost") || {}).value || "",
+    user: ($("#set-ddns-user") || {}).value || "",
+    password: ($("#set-ddns-password") || {}).value || "",
+    check_s: Number(($("#set-ddns-check") || {}).value || 300),
+    update_s: Number(($("#set-ddns-update") || {}).value || 300),
+  };
+  fetch("/api/ddns/config", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", "X-Auth-Token": getToken() },
+    credentials: "same-origin",
+    body: JSON.stringify(payload),
+  })
+    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+    .then(() => {
+      const s = $("#ddns-save-status"); if (s) s.textContent = "✓ " + t("ddns_saved", "gespeichert");
+      setTimeout(() => { if (s) s.textContent = ""; }, 4000);
+      loadDdnsConfig();
+    })
+    .catch(() => {
+      const s = $("#ddns-save-status"); if (s) s.textContent = "⚠ " + t("immich_save_failed");
+    });
+}
+function ddnsPost(path, target) {
+  fetch(path, { method: "POST", headers: { "Content-Type": "application/json", "X-Auth-Token": getToken() }, credentials: "same-origin", body: "{}" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((res) => {
+      const s = $(target); if (!s || !res) return;
+      if (res.ok === undefined && res.public_ip !== undefined) {
+        s.textContent = (res.public_ip ? "IP " + res.public_ip : "IP ?") + " · " + (res.dns_ip ? "A " + res.dns_ip : "A ?") + (res.match ? " ✓" : "");
+      } else {
+        s.textContent = (res.ok ? "✓ " : "✗ ") + (res.reason || res.text || "");
+      }
+      refreshDdnsState();
+      setTimeout(() => { s.textContent = ""; }, 8000);
+    })
+    .catch(() => {});
+}
+document.addEventListener("click", (e) => {
+  if (e.target && e.target.id === "btn-ddns-save") saveDdnsConfig();
+  else if (e.target && e.target.id === "btn-ddns-test") ddnsPost("/api/ddns/test", "#ddns-save-status");
+  else if (e.target && e.target.id === "btn-ddns-check") ddnsPost("/api/ddns/check", "#ddns-save-status");
+  else if (e.target && e.target.id === "btn-ddns-update") ddnsPost("/api/ddns/update", "#ddns-save-status");
+});
+setInterval(refreshDdnsState, 30000);
 
 $("#set-theme").addEventListener("change", (e) => {
   settings.theme = e.target.options?.[e.target.selectedIndex]?.value || e.target.value || "binary";

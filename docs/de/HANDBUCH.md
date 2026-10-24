@@ -30,6 +30,7 @@ Python-Backend.
 15. [TLS / Reverse Proxy](#15-tls--reverse-proxy)
 16. [Fehlersuche](#16-fehlersuche)
 17. [ARP-Tabelle & IP-Verteilung](#17-arp-tabelle--ip-verteilung)
+18. [Dynamisches DNS (DDNS-Updater)](#18-dynamisches-dns-ddns-updater)
 
 ---
 
@@ -504,6 +505,48 @@ bzw. Session-Infos (OpenVPN/IPsec).
   Kopf zeigt die Quellen-Zustände (`●` ok, `⚠` eingeschränkt, `○` aus).
 - Alles ist **read-only**: das Dashboard schreibt niemals in den Router.
 - Benötigte OPNsense-Berechtigungen — siehe README-Abschnitt
-  *Netzwerk-Topologie*: **Diagnostics: ARP Table** und **Diagnostics:
+  *ARP-Tabelle & IP-Verteilung*: **Diagnostics: ARP Table** und **Diagnostics:
   Network Insight** (zusätzlich DHCP-Lesezugriff für Lease-Daten).
+---
 
+## 18. Dynamisches DNS (DDNS-Updater)
+
+Hält bei dynamischer öffentlicher IP einen öffentlichen DNS-A-Record
+synchron — konfiguriert unter ⚙ → DDNS.
+
+### 18.1 Felder
+
+- **Update-URL** — der Update-Endpunkt des Anbieters mit Platzhaltern
+  `{ip}` `{host}` `{user}` `{pass}` (funktioniert mit jedem Anbieter, der das
+  DynDNS-Protokoll spricht). `{user}:{pass}@` im URL wird in
+  HTTP-Basic-Auth übersetzt; ohne Platzhalter werden Benutzer/Passwort
+  automatisch als Basic-Auth gesendet.
+- **Hostname (A-Record)** — der Name, der deiner IP folgen soll.
+- **Öffentliche IP ermitteln über** — welcher Echo-Dienst die öffentliche IP
+  meldet (leer = Dashboard-Standard).
+- **Benutzer / Passwort** — deine DDNS-Zugangsdaten. Das Passwort ist
+  write-only: es bleibt auf dem Server und erreicht nie den Browser.
+- **Prüfintervall** (Sekunden, min 60, Standard 300) — wie oft der A-Record
+  per System-Resolver aufgelöst und mit der aktuellen öffentlichen IP
+  verglichen wird.
+- **Updateintervall** (Sekunden, min 60, Standard 300) — Mindestabstand
+  zwischen zwei Update-Aufrufen; schützt vor IP-Flapping und
+  Provider-Sperren.
+- **DDNS-Updater aktivieren** — der Schalter; wirkt ohne Container-Neustart.
+
+### 18.2 Status
+
+Die Statusbox zeigt die aktuelle öffentliche IP, den DNS-A-Record, die
+letzte Prüfung/Update und die Anbieterantwort (`good <ip>`, `nochg`,
+`badauth`, `abuse` …). Drei Buttons:
+
+- **Verbindung testen** — löst den A-Record und holt die öffentliche IP,
+  ohne ein Update zu senden.
+- **Jetzt prüfen** — ein Prüfzyklus (Update nur bei Abweichung, unter
+  Beachtung des Updateintervalls).
+- **Jetzt aktualisieren** — erzwungenes Update unabhängig vom Rate-Limit.
+
+Nach 3 Fehlern in Folge pausiert der Updater 5 Minuten — DDNS-Anbieter
+sperren abusive Clients. Updates werden nur gesendet, wenn der A-Record
+tatsächlich von der aktuellen öffentlichen IP abweicht (keine
+Keep-alive-Pings).

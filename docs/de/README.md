@@ -6,7 +6,7 @@ Kacheln in frei anordnbaren Gruppen — mit serverseitiger Speicherung,
 Kein Framework, keine Build-Tools, keine Laufzeit-Abhängigkeiten:
 nur statische Dateien plus ein kleines Python-Backend (nur Stdlib).
 
-![Version](https://img.shields.io/badge/version-1.10.0-alpha-blue)
+![Version](https://img.shields.io/badge/version-1.12.0-alpha-blue)
 ![Python](https://img.shields.io/badge/python-3.12-informational)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -96,7 +96,7 @@ Zyklus, keine schnellen Wiederholungen.
 ## Netzwerk-Topologie (Phase 1)
 
 Das Dashboard kann die Geräte deines Netzes als Live-Topologie anzeigen.
-Datenquellen (⚙ → ARP/IP):
+Datenquellen (⚙ → Gateway):
 
 - **OPNsense (API)** — ARP-Tabelle + DHCPv4-Leases über die REST-API. Lege
   einen eigenen API-Key (oder Nur-Lese-Benutzer) an; Key/Secret bleiben auf
@@ -110,6 +110,31 @@ Datenquellen (⚙ → ARP/IP):
 `ZENTRIX_PUBLIC_IP_URL_FILE`, oder `public_ip_url` in `sources.json`); der
 Wert `-` deaktiviert die Abfrage.
 
+## Dynamisches DNS (A-Record-Updater)
+
+Hält einen öffentlichen DNS-A-Record synchron mit deiner dynamischen
+öffentlichen IP — konfigurierbar unter ⚙ → DDNS:
+
+- **Update-URL** mit Platzhaltern `{ip}` `{host}` `{user}` `{pass}` (mit
+  jedem DynDNS-Protokoll-Anbieter nutzbar). `{user}:{pass}@` im URL wird in
+  HTTP-Basic-Auth übersetzt; ohne Platzhalter werden Benutzer/Passwort
+  automatisch als Basic-Auth gesendet.
+- **Prüfintervall** (Standard 300 s, min 60): löst den A-Record per
+  System-Resolver und vergleicht mit der aktuellen öffentlichen IP — ein
+  Update wird **nur bei Abweichung** gesendet.
+- **Updateintervall** (Standard 300 s, min 60): Mindestabstand zwischen zwei
+  Update-Aufrufen (Rate-Limit gegen IP-Flapping und Provider-Sperren).
+- **IP-Host**: welcher Echo-Dienst die öffentliche IP ermittelt (leer =
+  Dashboard-Standard `http://checkip.dyndns.org/`).
+
+Das Passwort ist write-only (erreicht nie den Browser), die Konfiguration
+liegt in `ddns.json` im Data-Volume; GUI hat Vorrang vor Umgebungsvariablen
+(`DDNS_UPDATE_URL`, `DDNS_HOST`, `DDNS_USER`, `DDNS_PASSWORD`, `DDNS_CHECK_S`,
+`DDNS_UPDATE_S`, `DDNS_ENABLED`, plus `*_FILE`-Varianten). Nach 3 Fehlern in
+Folge pausiert der Updater 5 Minuten (Provider sperren abusive Clients).
+Buttons: *Verbindung testen* (nur Prüfung), *Jetzt prüfen* (ein Zyklus),
+*Jetzt aktualisieren* (erzwungen).
+
 > **Benötigte OPNsense-Berechtigungen** (System → Access → Users → ✎ →
 > *Berechtigungen*): **Diagnostics: ARP Table** und **Diagnostics: Network
 > Insight**. Für DHCP-Lease-Daten zusätzlich die Lese-Berechtigung des
@@ -121,10 +146,27 @@ IP), Hersteller stammen aus der mitgelieferten IEEE-OUI-Registrierung, und
 jedes Gerät zeigt seine Quellen und seine Konfidenz. Die Topologie-Ansicht
 ist strikt read-only: Zentrix schreibt niemals in den Router.
 
+**FRITZ!Box (TR-064)** — der klassische AVM-Router wird ebenfalls
+unterstützt: SOAP über HTTP (Port 49000) mit HTTP-Digest-Authentifizierung,
+Geräteliste via `X_AVM-DE_GetHostListPath` (komplette Liste inkl.
+WLAN/Ethernet-Typ, Gästenetz, Lease-Zeiten), Gerätezahl und Modell über den
+Standard-Hosts:1-Dienst. Nötig ist ein eigener FRITZ!Box-Benutzer
+(Heimnetz-Zugriff — niemals der Admin-Account); nur im Heimnetz verwenden,
+TR-064 ist auf Port 49000 unverschlüsselt (`https://…:49443` für TLS).
+
+Einrichtung an der FRITZ!Box (verifiziert mit FRITZ!OS):
+
+1. **App-Zugriff aktivieren** — Heimnetz → Netzwerk → *Erweiterte
+   Netzwerkeinstellungen ändern* → *Zugriff für Apps erlauben*
+   (standardmäßig aktiviert).
+2. **Benutzer anlegen** — System → FRITZ!Box-Benutzer. *FRITZ!Box
+   Einstellungen* genügt; Achtung: dieses Recht schließt implizit auch
+   Sprachnachrichten, Faxnachrichten, FRITZ!App Fon, Anrufliste und
+   Smart Home mit ein.
+
 Die Konfiguration liegt in `sources.json` im Data-Volume; GUI-Einstellungen
 haben Vorrang vor Umgebungsvariablen (`OPNSENSE_URL`, `OPNSENSE_API_KEY`,
-`OPNSENSE_API_SECRET`, `FRITZBOX_*` — ein FRITZ!Box-Adapter ist für ein
-späteres Release geplant).
+`OPNSENSE_API_SECRET`, `FRITZBOX_URL`, `FRITZBOX_USER`, `FRITZBOX_PASSWORD`).
 
 > **OPNsense-Zugangsdaten:** Zentrix nutzt das *API-Key + API-Secret*-Paar,
 > das OPNsense einmalig beim Erstellen anzeigt (System → Zugriff → Benutzer →

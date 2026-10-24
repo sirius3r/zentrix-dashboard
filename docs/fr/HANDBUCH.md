@@ -30,6 +30,7 @@ backend Python.
 15. [TLS / reverse proxy](#15-tls--reverse-proxy)
 16. [Dépannage](#16-dépannage)
 17. [Table ARP & répartition IP](#17-table-arp--répartition-ip)
+18. [DNS dynamique (DDNS)](#18-dns-dynamique-ddns)
 
 ---
 
@@ -505,7 +506,52 @@ affichent en plus l'âge du handshake et les compteurs de transfert
   l'état des sources (`●` ok, `⚠` dégradé, `○` désactivé).
 - Tout est en **lecture seule** : le tableau de bord n'écrit jamais dans le
   routeur.
-- Privilèges OPNsense requis — voir la section README *Network topology* :
+- Privilèges OPNsense requis — voir la section README *Table ARP & répartition IP* :
   **Diagnostics: ARP Table** et **Diagnostics: Network Insight** (plus l'accès
   en lecture aux baux DHCP).
+---
 
+## 18. DNS dynamique (DDNS)
+
+Avec une IP publique dynamique, l'outil DDNS garde un enregistrement DNS A
+synchronisé — configurable dans ⚙ → DDNS.
+
+### 18.1 Champs
+
+- **URL de mise à jour** — le point de terminaison du fournisseur avec les
+  variables `{ip}` `{host}` `{user}` `{pass}` (compatible avec tout
+  fournisseur parlant le protocole DynDNS). `{user}:{pass}@` dans l'URL est
+  traduit en HTTP Basic ; sans variables, utilisateur/mot de passe sont
+  envoyés en Basic automatiquement.
+- **Nom d'hôte (enregistrement A)** — le nom qui doit suivre votre IP.
+- **Détecter l'IP publique via** — quel service d'écho signale l'IP publique
+  (vide = valeur par défaut du tableau de bord).
+- **Utilisateur / mot de passe** — vos identifiants DDNS. Le mot de passe
+  est en écriture seule : il reste sur le serveur et n'atteint jamais le
+  navigateur.
+- **Intervalle de vérification** (secondes, min 60, défaut 300) — à quelle
+  fréquence l'enregistrement A est résolu via le résolveur système et
+  comparé à l'IP publique actuelle.
+- **Intervalle de mise à jour** (secondes, min 60, défaut 300) — espacement
+  minimal entre deux appels de mise à jour ; protège contre le flottement
+  d'IP et les blocages de fournisseurs.
+- **Activer le DDNS** — l'interrupteur ; fonctionne sans redémarrage du
+  conteneur.
+
+### 18.2 État
+
+La zone d'état montre l'IP publique actuelle, l'enregistrement A, la
+dernière vérification/mise à jour et la réponse du fournisseur (`good <ip>`,
+`nochg`, `badauth`, `abuse` …). Trois boutons :
+
+- **Tester la connexion** — résout l'enregistrement A et récupère l'IP
+  publique sans envoyer de mise à jour.
+- **Vérifier maintenant** — exécute un cycle (mise à jour seulement en cas
+  d'écart, en respectant l'intervalle).
+- **Mettre à jour maintenant** — force la mise à jour indépendamment de la
+  limite.
+
+Après 3 échecs consécutifs, l'outil marque une pause de 5 minutes — les
+fournisseurs DDNS bloquent les clients abusifs. Les mises à jour ne sont
+envoyées que si l'enregistrement A diffère réellement de l'IP publique
+actuelle (pas de ping keep-alive).

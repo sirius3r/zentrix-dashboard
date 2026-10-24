@@ -4,7 +4,7 @@
    list. German/English labels via ZENTRIX_I18N (topo_* keys). */
 (function () {
   "use strict";
-  const TOPO_JS_VERSION = "1.10.0-alpha-fix28";  /* visible in settings pane for cache debugging */
+  const TOPO_JS_VERSION = "1.12.0-alpha";  /* visible in settings pane for cache debugging */
   const $ = (s) => document.querySelector(s);
   const VIEW = $("#topology-view");
   const CANVAS = $("#topo-canvas");
@@ -59,13 +59,17 @@
   function deviceKey(d) { return d.mac || ("ip:" + d.ip); }
   function activeState(d) { return d.active === true ? "online" : (d.active === false ? "offline" : "unknown"); }
 
+  /* Anzeigenamen für Quellen (source_id → lesbar, Martins Wunsch 10/2026) */
+  const SRC_NAMES = { opnsense: "OPNsense", tr064: "Fritz!Box", mdns: "mDNS" };
+  function srcName(id) { return SRC_NAMES[id] || id; }
+
   /* ---------------- status strip ---------------- */
   function renderStatus() {
     const srcs = data.sources || {};
     const parts = [];
     for (const [sid, s] of Object.entries(srcs)) {
       const flag = s.enabled ? (s.degraded || s.last_error ? "⚠" : "●") : "○";
-      parts.push(flag + " " + sid);
+      parts.push(flag + " " + srcName(sid));
     }
     const n = data.devices.length;
     const on = data.devices.filter((d) => d.active !== false).length;
@@ -141,7 +145,7 @@
       for (const d of devs) {
         const k = deviceKey(d);
         const online = d.active === true;
-        const srcs = ((d.sources || [])).join("·");
+        const srcs = ((d.sources || [])).map(srcName).join("·");
         rows.push(`<div class="topo-row${online ? "" : " offline"}${k === selectedKey ? " selected" : ""}" data-key="${esc(k)}">` +
           `<span class="c-st"><span class="dot${online ? "" : " off"}"></span></span>` +
           `<span class="c-host">${esc(d.hostname || (d.vendor ? d.vendor + " (" + t("topo_no_host", "kein Hostname") + ")" : null) || d.ip || "(" + t("topo_d_unknown", "unbekannt") + ")")}</span>` +
@@ -179,7 +183,7 @@
       [t("topo_d_host", "Hostname"), d.hostname || t("topo_d_host_none", "— (keine DHCP-Lease am Router)")],
       [t("topo_d_vendor", "Hersteller"), d.vendor ? d.vendor + " " + t("topo_d_vendor_oui", "(OUI)") : (lease.man || t("topo_d_unknown", "unbekannt"))],
       [t("topo_d_status", "Status"), d.active === true ? t("topo_d_online", "online") : d.active === false ? t("topo_d_offline", "offline") : t("topo_d_unknown", "unbekannt")],
-      [t("topo_d_sources", "Quellen"), (d.sources || []).join(", ") || "—"],
+      [t("topo_d_sources", "Quellen"), (d.sources || []).map(srcName).join(", ") || "—"],
       [t("topo_d_conf", "Konfidenz"), Math.round((d.confidence || 0) * 100) + " %"],
       [t("topo_d_seen", "Letzte Sichtung"), d.age_s != null ? (d.age_s < 90
         ? t("topo_d_ago_s", "vor {n} s").replace("{n}", d.age_s)
@@ -247,6 +251,7 @@
       if (!res.ok) return;
       const view = await res.json();
       graphData.interfaces = view.interfaces || [];
+      graphData.source = view.source || null;
       graphData.public_ip = view.public_ip || null;
       graphData.vpn = view.vpn || { branches: {}, devices: [] };
       if (open) drawGraph();
@@ -347,15 +352,24 @@
     ctx.clearRect(0, 0, W, H);
     ctx.font = `${12*fs}px 'JetBrains Mono', monospace`;
 
-    /* CORE: OPNsense mit Modellnamen */
+    const ifs = graphData.interfaces || [];
+    /* CORE: aktiver Router (Name nach Quelle) — ohne Quelle kein Core */
+    const coreName = { opnsense: "OPNsense", tr064: "Fritz!Box" }[graphData.source] || "Gateway";
+    if (!graphData.source || !ifs.length) {
+      ctx.fillStyle = ink3; ctx.font = `${11*fs}px 'JetBrains Mono', monospace`;
+      ctx.fillText(t("topo_no_router", "Kein Router konfiguriert — Quelle in den Optionen aktivieren"), 20, 50);
+      ctx.fillStyle = ink3; ctx.font = `${10*fs}px 'JetBrains Mono', monospace`;
+      ctx.fillText(t("topo_footer", "Auto-Poll 30 s · Quelle: OPNsense-API (Interfaces, Leases, VPN, mDNS passiv)")
+      .replace("OPNsense-API", srcName(graphData.source || "opnsense")), 20, H - 12);
+      return;
+    }
     const core = { x: 20, y: 30, w: 210, h: 66 };
     roundRect(ctx, core.x, core.y, core.w, core.h, 10, accent, 1.4);
     ctx.fillStyle = accent; ctx.fillText("// CORE", core.x + 12, core.y + 20);
     ctx.fillStyle = ink; ctx.font = `bold ${13*fs}px 'JetBrains Mono', monospace`;
-    ctx.fillText("OPNsense", core.x + 12, core.y + 40);
+    ctx.fillText(coreName, core.x + 12, core.y + 40);
     ctx.font = `${11*fs}px 'JetBrains Mono', monospace`;
     ctx.fillStyle = ink3;
-    const ifs = graphData.interfaces || [];
     ctx.fillText((ifs.length || "?") + " " + t("topo_n_if", "Interfaces") + " · " + graphData.areas.length + " " + t("topo_n_areas", "Bereiche"), core.x + 12, core.y + 56);
 
     /* Zeilen = Paare (Interface + SEIN Bereich), aufsteigend nach IP-Bereich sortiert */
@@ -523,6 +537,11 @@ function roundRect(ctx, x, y, w, h, r, stroke, lw) {
       $("#set-topo-opnsense-key").placeholder = o.key_set ? "gesetzt (••••)" : "API-Key";
       $("#set-topo-opnsense-secret").value = "";
       $("#set-topo-opnsense-secret").placeholder = o.secret_set ? "gesetzt (••••)" : "API-Secret";
+      const fb = cfg.tr064 || {};
+      $("#set-topo-fb-url").value = fb.url || "";
+      $("#set-topo-fb-user").value = fb.user || "";
+      $("#set-topo-fb-password").value = "";
+      $("#set-topo-fb-password").placeholder = fb.password_set ? "gesetzt (••••)" : "Passwort";
       $("#set-topo-mdns-enabled").checked = !!(cfg.mdns && cfg.mdns.enabled);
     } catch (e) {}
   }
@@ -545,10 +564,19 @@ function roundRect(ctx, x, y, w, h, r, stroke, lw) {
       },
       mdns: { enabled: $("#set-topo-mdns-enabled").checked },
     };
+    const fbUrl = $("#set-topo-fb-url").value.trim();
+    patch.tr064 = {
+      enabled: fbUrl !== "",
+      url: fbUrl,
+      user: $("#set-topo-fb-user").value.trim(),
+      poll_s: 300,
+    };
     const key = $("#set-topo-opnsense-key").value.trim();
     const secret = $("#set-topo-opnsense-secret").value.trim();
     if (key) patch.opnsense.key = key;
     if (secret) patch.opnsense.secret = secret;
+    const fbPassword = $("#set-topo-fb-password").value.trim();
+    if (fbPassword) patch.tr064.password = fbPassword;
     try {
       const res = await fetch("/api/topology/sources", {
         method: "PUT",
@@ -586,12 +614,36 @@ function roundRect(ctx, x, y, w, h, r, stroke, lw) {
     setTimeout(() => ($("#topo-opnsense-status").textContent = ""), 8000);
   });
 
+  $("#btn-topo-fb-test").addEventListener("click", async () => {
+    const token = (window.ZENTRIX_GET_TOKEN && window.ZENTRIX_GET_TOKEN()) || getTokenLocal();
+    $("#topo-fb-status").textContent = "… teste";
+    try {
+      const res = await fetch("/api/topology/probe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Auth-Token": token },
+        body: JSON.stringify({
+          source: "tr064",
+          url: $("#set-topo-fb-url").value.trim(),
+          user: $("#set-topo-fb-user").value.trim(),
+          secret: $("#set-topo-fb-password").value.trim(),
+        }),
+      });
+      const r = await res.json();
+      $("#topo-fb-status").textContent = r.ok
+        ? `✓ ${r.router_model || "FRITZ!Box"} · ${r.device_count} ${t("topo_mb_count", "Geräte")} · ${r.latency_ms} ms`
+        : "✗ " + (r.message || r.error_code || "Fehler");
+    } catch (e) {
+      $("#topo-fb-status").textContent = "✗ " + e.message;
+    }
+    setTimeout(() => ($("#topo-fb-status").textContent = ""), 8000);
+  });
+
   // settings tab registration (same mechanism as immich tab)
   document.addEventListener("click", (e) => {
     if (e.target && e.target.id === "tab-topology") {
       loadTopologyCfg();
       const hint = document.getElementById("topo-opnsense-status");
-      if (hint && !hint.textContent) hint.textContent = "topology.js v" + TOPO_JS_VERSION;
+      
     }
   });
 })();

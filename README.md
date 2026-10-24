@@ -9,7 +9,7 @@ only).
 ![Dashboard](https://github.com/sirius3r/zentrix-dashboard/blob/main/screenshot/screenshot1.png)
 ![Settings](https://github.com/sirius3r/zentrix-dashboard/blob/main/screenshot/screenshot2.png)
 
-![Version](https://img.shields.io/badge/version-1.10.0-alpha-blue)
+![Version](https://img.shields.io/badge/version-1.12.0-alpha-blue)
 ![Python](https://img.shields.io/badge/python-3.12-informational)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -118,7 +118,7 @@ photo of the album appears exactly once per cycle, no fast repeats.
 ## Network topology (Phase 1)
 
 The dashboard can display the devices in your network as a live topology view.
-Data sources (⚙ → ARP/IP):
+Data sources (⚙ → Gateway):
 
 - **OPNsense (API)** — ARP table + DHCPv4 leases via the REST API. Create a
   dedicated API key (or a read-only user); the key/secret stay on the
@@ -129,6 +129,31 @@ Data sources (⚙ → ARP/IP):
 external echo service (default: `http://checkip.dyndns.org/`, 10-minute
 cache). Override with `ZENTRIX_PUBLIC_IP_URL` (or `ZENTRIX_PUBLIC_IP_URL_FILE`,
 or `public_ip_url` in `sources.json`); the value `-` disables the lookup.
+
+## Dynamic DNS (A-record updater)
+
+Keep a public DNS A record in sync with your dynamic public IP — configurable
+in ⚙ → DDNS:
+
+- **Update URL** with placeholders `{ip}` `{host}` `{user}` `{pass}`
+  (works with any DynDNS-protocol provider). `{user}:{pass}@` in the URL is
+  translated to HTTP Basic auth; without placeholders, username/password are
+  sent as Basic auth automatically.
+- **Check interval** (default 300 s, min 60): resolves the A record via the
+  system resolver and compares it with the current public IP — an update is
+  only sent **on mismatch**.
+- **Update interval** (default 300 s, min 60): minimum spacing between two
+  update calls (rate limit against IP flapping and provider lockouts).
+- **IP host**: which echo service detects the public IP (empty = dashboard
+  default `http://checkip.dyndns.org/`).
+
+The password is write-only (never returned to the browser), configuration
+lives in `ddns.json` in the data volume; GUI takes precedence over
+environment (`DDNS_UPDATE_URL`, `DDNS_HOST`, `DDNS_USER`, `DDNS_PASSWORD`,
+`DDNS_CHECK_S`, `DDNS_UPDATE_S`, `DDNS_ENABLED`, plus `*_FILE` variants).
+After 3 consecutive failures the updater pauses for 5 minutes (providers
+lock out abusive clients). Buttons: *Test connection* (resolve + fetch, no
+update), *Check now* (one cycle), *Update now* (force update).
 
 > **Required OPNsense privileges** (System → Access → Users → ✎ →
 > *Privileges*): **Diagnostics: ARP Table** and **Diagnostics:Network
@@ -141,10 +166,27 @@ resolved from the bundled IEEE OUI registry, and every device shows its
 sources and confidence. The topology view stays read-only: Zentrix never
 writes to the router.
 
+**FRITZ!Box (TR-064)** — the classic AVM home router is also supported:
+SOAP over HTTP (port 49000) with HTTP-Digest auth, host list via
+`X_AVM-DE_GetHostListPath` (full list incl. Wi-Fi/Ethernet type, guest
+network, lease times), device count and model via the standard Hosts:1
+service. Requires a dedicated FRITZ!Box user (Heimnetz access — never the
+admin account) and is meant for the home network only; TR-064 traffic is
+unencrypted on port 49000 (use `https://…:49443` for TLS).
+
+Setup on the FRITZ!Box (verified on FRITZ!OS):
+
+1. **Enable app access** — Heimnetz → Netzwerk → *Erweiterte
+   Netzwerkeinstellungen ändern* → *Zugriff für Apps erlauben*
+   (enabled by default).
+2. **Create a user** — System → FRITZ!Box-Benutzer. *FRITZ!Box
+   Einstellungen* is sufficient; be aware that this right implicitly
+   also grants voice messages, fax messages, FRITZ!App Fon, call list
+   and Smart Home access.
+
 Configuration lives in `sources.json` in the data volume; GUI settings take
 precedence over environment variables (`OPNSENSE_URL`, `OPNSENSE_API_KEY`,
-`OPNSENSE_API_SECRET`, `FRITZBOX_*` — a FRITZ!Box adapter is planned for a
-later release).
+`OPNSENSE_API_SECRET`, `FRITZBOX_URL`, `FRITZBOX_USER`, `FRITZBOX_PASSWORD`).
 
 > **OPNsense credentials:** Zentrix uses the *API key + API secret* pair that
 > OPNsense shows once when you create a key (System → Access → Users → ✎ →

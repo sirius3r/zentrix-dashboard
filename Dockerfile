@@ -8,7 +8,7 @@ RUN addgroup -g 1000 -S zentrix && adduser -u 1000 -G zentrix -S -h /app zentrix
     && mkdir -p /data && chown zentrix:zentrix /data /app
 
 WORKDIR /app
-COPY --chown=zentrix:zentrix index.html app.js bg.js i18n.js topology.js zentrix-server.py server_i18n.py immich_client.py net_sources.py sources_config.py opnsense_source.py mdns_source.py source_registry.py oui-manuf.json.gz /app/
+COPY --chown=zentrix:zentrix index.html app.js bg.js i18n.js topology.js zentrix-server.py server_i18n.py immich_client.py net_sources.py sources_config.py opnsense_source.py tr064_source.py mdns_source.py source_registry.py ddns_client.py oui-manuf.json.gz /app/
 
 # State lives on a volume, token comes from a secret (see stack file)
 ENV ZENTRIX_DATA_FILE=/data/links.json \

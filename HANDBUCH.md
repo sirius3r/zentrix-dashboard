@@ -29,6 +29,7 @@ static files plus a small Python backend.
 15. [TLS / reverse proxy](#15-tls--reverse-proxy)
 16. [Troubleshooting](#16-troubleshooting)
 17. [ARP table & IP distribution](#17-arp-table--ip-distribution)
+18. [Dynamic DNS updater](#18-dynamic-dns-updater)
 
 ---
 
@@ -487,7 +488,50 @@ and transfer counters (WireGuard) or session info (OpenVPN/IPsec).
   the current source states (`●` ok, `⚠` degraded, `○` disabled).
 - Everything is **read-only**: the dashboard never sends configuration to the
   router.
-- Required OPNsense privileges — see the README section *Network topology*:
+- Required OPNsense privileges — see the README section *ARP table & IP distribution*:
   **Diagnostics: ARP Table** and **Diagnostics: Network Insight** (plus DHCP
   lease read access for lease data).
+---
 
+## 18. Dynamic DNS updater
+
+If your internet connection has a dynamic public IP, the DDNS updater keeps
+a public DNS A record in sync with it — configured in ⚙ → DDNS.
+
+### 18.1 Fields
+
+- **Update URL** — the provider's update endpoint with placeholders
+  `{ip}` `{host}` `{user}` `{pass}` (works with any provider speaking the
+  DynDNS protocol). If `{user}:{pass}@` appears in the URL it is translated
+  to HTTP Basic auth; without placeholders, the username/password are sent
+  as Basic auth automatically.
+- **Hostname (A-record)** — the name that should follow your IP.
+- **Detect public IP via** — which echo service reports the public IP
+  (empty = the dashboard default).
+- **Username / password** — your DDNS-provider credentials. The password is
+  write-only: it stays on the server and is never sent to the browser.
+- **Check interval** (seconds, min 60, default 300) — how often the dashboard
+  resolves the A record via the system resolver and compares it with the
+  current public IP.
+- **Update interval** (seconds, min 60, default 300) — minimum spacing
+  between two update calls; protects against IP flapping and provider
+  lockouts.
+- **Enable DDNS updater** — the switch; it works without restarting the
+  container.
+
+### 18.2 Status
+
+The status box shows the current public IP, the DNS A record, the last
+check/update and the provider's answer (`good <ip>`, `nochg`, `badauth`,
+`abuse` …). Three buttons are available:
+
+- **Test connection** — resolves the A record and fetches the public IP
+  without sending an update.
+- **Check now** — runs one check cycle (update only on mismatch, respecting
+  the update interval).
+- **Update now** — forces an update regardless of the rate limit.
+
+After 3 consecutive failures the updater pauses for 5 minutes — DDNS
+providers lock out abusive clients, so retries stay calm. The updater only
+ever sends updates when the A record actually differs from the current
+public IP (no keep-alive pings).

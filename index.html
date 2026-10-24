@@ -533,7 +533,7 @@ body.edit-mode .group-drag-handle { display: inline; }
 
 /* ---------- settings ---------- */
 .icon-btn { font-size: 16px; padding: 7px 11px; }
-.settings-modal { width: min(640px, calc(100vw - 40px)); }
+.settings-modal { width: min(92vw, 1100px); max-width: calc(100vw - 16px); }
 .settings-section { margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--line); }
 .settings-section:last-of-type { border-bottom: none; }
 .settings-label {
@@ -647,6 +647,8 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
 .sync-chip:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ============ TOPOLOGY VIEW (Phase 1) ============ */
+.topo-icon { display: block; }
+#btn-topology svg { vertical-align: middle; }
 #topology-view { max-width: min(2200px, 96vw); margin: 0 auto; padding: clamp(12px, 2vw, 32px) clamp(12px, 2.5vw, 56px) 40px; position: relative; z-index: 1; }
 .topo-head { display: flex; align-items: baseline; gap: 18px; margin-bottom: 14px; flex-wrap: wrap; }
 .topo-title { font-family: var(--mono); font-size: clamp(13px, 1.1vw, 17px); letter-spacing: 0.08em; color: var(--ink-1); }
@@ -746,7 +748,7 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
   <div class="clock"><span id="clock-date">—</span><span class="sep">│</span><span id="clock-time">—</span></div>
   <span class="sync-chip" id="sync-chip" title="Speicherstatus">…</span>
   <button class="btn icon-btn search-toggle" id="btn-search-toggle" title="Suche einblenden" aria-label="Suche">⌕</button>
-  <button class="btn icon-btn" id="btn-topology" title="Netzwerk-Topologie">⌖</button>
+  <button class="btn icon-btn" id="btn-topology" title="Netzwerk-Topologie" aria-label="ARP-Tabelle &amp; IP-Verteilung"><svg class="topo-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="6.2" y="1.6" width="3.6" height="3.6" rx="0.8" stroke="currentColor" stroke-width="1.3"/><rect x="1.2" y="10.8" width="3.6" height="3.6" rx="0.8" stroke="currentColor" stroke-width="1.3"/><rect x="11.2" y="10.8" width="3.6" height="3.6" rx="0.8" stroke="currentColor" stroke-width="1.3"/><path d="M8 5.2v3.2M9.8 10.6H6.2M4.8 12.6h-0.1M11.2 12.6h0.1" stroke="currentColor" stroke-width="1.3"/><path d="M8 8.4 3 10.8M8 8.4l5 2.4" stroke="currentColor" stroke-width="1.3"/></svg></button>
   <button class="btn icon-btn" id="btn-edit" title="Bearbeiten">✎</button>
   <button class="btn icon-btn" id="btn-settings" title="Einstellungen öffnen" aria-haspopup="dialog">⚙</button>
 </header>
@@ -758,7 +760,7 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
 
 <main class="wrap" id="board"></main>
 <!-- ============ TOPOLOGY VIEW (Phase 1) ============ -->
-<section id="topology-view" style="display:none" aria-label="ARP-Tabelle & IP-Verteilung">
+<section id="topology-view" style="display:none" aria-label="Gateway">
   <div class="topo-head">
     <div class="topo-title"><span class="topo-accent">//</span> <span id="lbl-topo-title">ARP-TABELLE &amp; IP-VERTEILUNG</span>
       <span class="topo-status" id="topo-status">…</span>
@@ -843,7 +845,8 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
       <button class="settings-tab active" id="tab-appearance" type="button" role="tab">Erscheinungsbild</button>
       <button class="settings-tab" id="tab-branding" type="button" role="tab">Branding</button>
       <button class="settings-tab" id="tab-immich" type="button" role="tab">Immich</button>
-      <button class="settings-tab" id="tab-topology" type="button" role="tab">ARP-Tabelle &amp; IP-Verteilung</button>
+      <button class="settings-tab" id="tab-topology" type="button" role="tab">Gateway</button>
+      <button class="settings-tab" id="tab-ddns" type="button" role="tab">DDNS</button>
       <button class="settings-tab" id="tab-data" type="button" role="tab">Daten</button>
       <button class="settings-tab" id="tab-info" type="button" role="tab">Info</button>
     </div>
@@ -998,6 +1001,17 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
           <span class="hint" id="topo-opnsense-status"></span>
         </div>
         <div class="settings-field">
+          <span class="settings-field-name" id="lbl-topo-fritzbox">FRITZ!Box (TR-064)</span>
+          <input id="set-topo-fb-url" type="text" placeholder="http://fritz.box:49000" autocomplete="off">
+          <input id="set-topo-fb-user" type="text" placeholder="Benutzer (nicht admin)" autocomplete="off">
+          <input id="set-topo-fb-password" type="password" placeholder="Passwort" autocomplete="new-password">
+          <div class="hint" id="lbl-topo-fb-hint">Passwort bleibt auf dem Server (write-only) · nur im Heimnetz verwenden</div>
+        </div>
+        <div class="settings-actions">
+          <button class="btn" id="btn-topo-fb-test">Verbindung testen</button>
+          <span class="hint" id="topo-fb-status"></span>
+        </div>
+        <div class="settings-field">
           <span class="settings-field-name" id="lbl-topo-mdns">mDNS (passiv)</span>
           <label class="settings-check"><input type="checkbox" id="set-topo-mdns-enabled"> <span id="lbl-topo-mdns-on">Empfangen von mDNS-Broadcasts aktivieren</span></label>
         </div>
@@ -1007,6 +1021,54 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
         </div>
       </div>
     </div><!-- /pane-topology -->
+    <div class="settings-pane" id="pane-ddns">
+    <div class="settings-section">
+      <div class="settings-label" id="lbl-ddns">Dynamisches DNS (A-Record Updater)</div>
+      <label class="settings-field">
+        <span class="settings-field-name" id="lbl-ddns-url">Update-URL</span>
+        <input id="set-ddns-url" type="text" placeholder="https://{user}:{pass}@members.dyndns.org/nic/update?hostname={host}&amp;myip={ip}" autocomplete="off">
+        <div class="hint" id="lbl-ddns-url-hint">Platzhalter: {ip} {host} {user} {pass} — ohne {user}:{pass} im URL werden Zugangsdaten als HTTP-Basic-Auth gesendet</div>
+      </label>
+      <label class="settings-field">
+        <span class="settings-field-name" id="lbl-ddns-host">Hostname (A-Record)</span>
+        <input id="set-ddns-host" type="text" placeholder="home.example.com" autocomplete="off">
+      </label>
+      <label class="settings-field">
+        <span class="settings-field-name" id="lbl-ddns-iphost">Öffentliche IP ermitteln über</span>
+        <input id="set-ddns-iphost" type="text" placeholder="http://checkip.dyndns.org/" autocomplete="off">
+        <div class="hint" id="lbl-ddns-iphost-hint">leer = Dashboard-Standard</div>
+      </label>
+      <label class="settings-field">
+        <span class="settings-field-name" id="lbl-ddns-user">Benutzer</span>
+        <input id="set-ddns-user" type="text" autocomplete="off">
+      </label>
+      <label class="settings-field">
+        <span class="settings-field-name" id="lbl-ddns-pw">Passwort (write-only)</span>
+        <input id="set-ddns-password" type="password" placeholder="Passwort" autocomplete="new-password">
+        <div class="hint" id="lbl-ddns-pw-hint">Passwort bleibt auf dem Server (write-only)</div>
+      </label>
+      <div class="settings-row">
+        <label class="settings-field">
+          <span class="settings-field-name" id="lbl-ddns-check">Prüfintervall (Sekunden)</span>
+          <input id="set-ddns-check" type="number" min="60" step="60" value="300">
+        </label>
+        <label class="settings-field">
+          <span class="settings-field-name" id="lbl-ddns-update">Updateintervall (Sekunden, Mindestabstand)</span>
+          <input id="set-ddns-update" type="number" min="60" step="60" value="300">
+        </label>
+      </div>
+      <label class="settings-check"><input type="checkbox" id="set-ddns-enabled"> <span id="lbl-ddns-on">DDNS-Updater aktivieren</span></label>
+      <div class="settings-label" id="lbl-ddns-status" style="margin-top:14px">Status</div>
+      <div class="hint" id="ddns-state-box">—</div>
+      <div class="settings-actions">
+        <button class="btn" id="btn-ddns-test" type="button">Verbindung testen</button>
+        <button class="btn" id="btn-ddns-check" type="button">Jetzt prüfen</button>
+        <button class="btn" id="btn-ddns-update" type="button">Jetzt aktualisieren</button>
+        <button class="btn primary" id="btn-ddns-save" type="button">Speichern</button>
+        <span class="hint" id="ddns-save-status"></span>
+      </div>
+    </div>
+    </div><!-- /pane-ddns -->
 
 
     <div class="settings-pane" id="pane-data">
@@ -1027,7 +1089,7 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
         <div class="settings-label" id="lbl-info-title">Informationen</div>
         <div class="info-row">
           <span class="info-key" id="info-version-key">Version</span>
-          <span class="info-value">1.10.0-alpha</span>
+          <span class="info-value">1.12.0-alpha</span>
         </div>
         <div class="info-row">
           <span class="info-key" id="info-repo-key">GitHub-Repository</span>
@@ -1068,6 +1130,6 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
 <script src="/bg.js?v=1100a" defer></script>
 <script src="/i18n.js?v=1100a" defer></script>
 <script src="/app.js?v=1100a" defer></script>
-<script src="/topology.js?v=1100a-fix28" defer></script>
+<script src="/topology.js?v=1120a" defer></script>
 </body>
 </html>

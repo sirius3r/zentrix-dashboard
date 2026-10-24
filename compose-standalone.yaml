@@ -22,6 +22,15 @@ services:
       # OPNSENSE_URL: https://opnsense.lan
       # OPNSENSE_API_KEY: your-api-key
       # OPNSENSE_API_SECRET: your-api-secret
+      # FRITZBOX_URL: http://fritz.box:49000
+      # FRITZBOX_USER: zentrix-reader
+      # FRITZBOX_PASSWORD: your-fritzbox-password
+      # Optional — Dynamic DNS A-record updater (or configure in the ⚙ settings GUI):
+      # DDNS_ENABLED: "1"
+      # DDNS_UPDATE_URL: "https://members.dyndns.org/nic/update?hostname={host}&myip={ip}"
+      # DDNS_HOST: home.example.com
+      # DDNS_USER: dns-user
+      # DDNS_PASSWORD_FILE: /run/secrets/ddns_password
       ZENTRIX_DATA_FILE: /data/links.json
     volumes:
       - /opt/zentrix/data:/data

@@ -299,6 +299,17 @@ class Handler(BaseHTTPRequestHandler):
                 return
             from immich_client import masked_config
             self._json(200, masked_config())
+        elif path == "/api/ddns/state":
+            from ddns_client import STATE
+            with STATE._lock:
+                st = dict(STATE.state)
+            self._json(200, st)
+        elif path == "/api/ddns/config":
+            if not self._authorized():
+                self._err(401, "err_auth")
+                return
+            from ddns_client import public_state
+            self._json(200, public_state())
         elif path == "/api/topology/view":
             from source_registry import REGISTRY
             self._json(200, REGISTRY.fetch_topology_data())
@@ -344,6 +355,32 @@ class Handler(BaseHTTPRequestHandler):
             }
             self._json(200, STATE.probe(cfg))
             return
+        if path == "/api/ddns/test":
+            if not self._authorized():
+                self._err(401, "err_auth")
+                return
+            from ddns_client import get_config, STATE
+            cfg = get_config()
+            ip = STATE._ip_fetcher(cfg["ip_host"])
+            dns_ip = STATE._resolver(cfg["host"]) if cfg["host"] else None
+            self._json(200, {"ok": bool(ip and dns_ip), "public_ip": ip,
+                             "dns_ip": dns_ip, "complete": cfg["complete"],
+                             "match": bool(ip and dns_ip and ip == dns_ip)})
+            return
+        if path == "/api/ddns/check":
+            if not self._authorized():
+                self._err(401, "err_auth")
+                return
+            from ddns_client import STATE
+            self._json(200, STATE.check_once())
+            return
+        if path == "/api/ddns/update":
+            if not self._authorized():
+                self._err(401, "err_auth")
+                return
+            from ddns_client import STATE
+            self._json(200, STATE.check_once(force=True))
+            return
         if path == "/api/topology/probe":
             if not self._authorized():
                 self._err(401, "err_auth")
@@ -374,6 +411,7 @@ class Handler(BaseHTTPRequestHandler):
                 probe_cfg["url"] = str(data["url"]).strip()
             typed_key = str(data.get("key", "") or "").strip()
             typed_secret = str(data.get("secret", "") or "").strip()
+            typed_user = str(data.get("user", "") or "").strip()
             if src_id == "opnsense":
                 from opnsense_source import OpnSenseSource
                 adapter = OpnSenseSource()
@@ -391,11 +429,20 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(200, result)
                 return
             if src_id == "tr064":
-                # Phase 4 — adapter not implemented yet; honest answer
-                self._json(200, {"ok": False, "reachable": False, "authenticated": False,
-                                 "device_count": None, "latency_ms": 0,
-                                 "router_model": None, "error_code": "config",
-                                 "message": "FRITZ!Box adapter is planned for Phase 4"})
+                from tr064_source import Tr064Source
+                adapter = Tr064Source()
+                result = None
+                try:
+                    result = adapter.probe(probe_cfg,
+                                           user=typed_user or (probe_cfg.get("user") or ""),
+                                           password=typed_secret or SOURCES_CONFIG.secret("tr064", "password"))
+                except Exception as e:
+                    code = getattr(e, "code", "error")
+                    result = {"ok": False, "reachable": code != "unreachable",
+                              "authenticated": code != "auth", "device_count": None,
+                              "latency_ms": 0, "router_model": None, "error_code": code,
+                              "message": str(e)}
+                self._json(200, result)
                 return
             self._json(200, {"ok": False, "error_code": "config", "message": "not probeable"})
             return
@@ -427,6 +474,30 @@ class Handler(BaseHTTPRequestHandler):
                 return
             # config changed → force next photo fetch + album re-resolve (thread-safe)
             STATE.reset_runtime()
+            self._json(200, {"status": "saved"})
+            return
+        if path == "/api/ddns/config":
+            if not self._authorized():
+                self._err(401, "err_auth")
+                return
+            try:
+                length = int(self.headers.get("Content-Length", "0"))
+            except ValueError:
+                self._err(400, "err_content_length")
+                return
+            if length <= 0 or length > 64 * 1024:
+                self._err(413, "err_too_large", kb=64)
+                return
+            raw = self.rfile.read(length)
+            try:
+                data = json.loads(raw.decode("utf-8"))
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                self._err(400, "err_bad_json")
+                return
+            from ddns_client import save_gui_config
+            if not save_gui_config(data):
+                self._err(400, "err_bad_format")
+                return
             self._json(200, {"status": "saved"})
             return
         if path == "/api/topology/sources":
@@ -497,11 +568,24 @@ def main():
     print(f"[zentrix] data file: {DATA_FILE}")
     print(f"[zentrix] write token: {'from env/file' if (os.environ.get('ZENTRIX_TOKEN') or TOKEN_FILE.exists()) else 'see above'}")
     _start_topology()
+    _start_ddns()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
         print("\n[zentrix] bye")
         server.server_close()
+
+
+def _start_ddns():
+    """Optional: DDNS-A-Record-Updater (thread must never break the dashboard).
+    Thread startet immer — der Loop prüft `enabled` pro Tick, damit die GUI
+    DDNS ohne Container-Neustart aktivieren kann."""
+    try:
+        from ddns_client import get_config, STATE
+        STATE.start()
+        print(f"[zentrix] ddns: {'on' if get_config()['enabled'] else 'off (GUI can enable)'}")
+    except Exception as e:
+        print(f"[zentrix] ddns disabled: {e}", file=sys.stderr)
 
 
 def _start_topology():
@@ -519,6 +603,14 @@ def _start_topology():
             cfg_getter=lambda: SOURCES_CONFIG.get("opnsense"),
             secret_getter=lambda f: SOURCES_CONFIG.secret("opnsense", f),
             secret_fields=("key", "secret"),
+        )
+        from tr064_source import Tr064Source
+        fb_enabled = SOURCES_CONFIG.public_state().get("tr064", {}).get("enabled")
+        REGISTRY.register(
+            Tr064Source(),
+            cfg_getter=lambda: SOURCES_CONFIG.get("tr064"),
+            secret_getter=lambda f: SOURCES_CONFIG.secret("tr064", f),
+            secret_fields=("password",),
         )
         MDNS = MdnsListener()
         import source_registry as _sr
@@ -540,8 +632,8 @@ def _start_topology():
         )
         REGISTRY.start()
         print(f"[zentrix] topology: opnsense={'on' if enabled else 'off'}, "
-              f"mdns={'on' if mdns_enabled else 'off'}, oui="
-              f"{'ok' if REGISTRY.oui.path.exists() else 'missing'}")
+              f"tr064={'on' if fb_enabled else 'off'}, mdns={'on' if mdns_enabled else 'off'}, "
+              f"oui={'ok' if REGISTRY.oui.path.exists() else 'missing'}")
     except Exception as e:
         # topology must never break the dashboard (spec §2)
         print(f"[zentrix] topology disabled: {e}", file=sys.stderr)

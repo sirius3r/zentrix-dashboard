@@ -144,6 +144,7 @@ class SourceRegistry:
         """Pull interfaces + vpn branches from the first capable source (spec §3).
         Read-only; errors per branch isolated — fehlende Module liefern leere Zweige."""
         interfaces, vpn_branches, vpn_sightings = [], {}, []
+        active_source = None
         for sid, entry in list(self.entries.items()):
             cfg = entry.build_cfg()
             if not cfg.get("enabled"):
@@ -152,6 +153,8 @@ class SourceRegistry:
             try:
                 if hasattr(adapter, "fetch_interfaces"):
                     interfaces = adapter.fetch_interfaces(cfg) or []
+                    if interfaces:
+                        active_source = sid
             except Exception as e:
                 pass  # isolated
             try:
@@ -173,6 +176,7 @@ class SourceRegistry:
                 if d.raw and (d.raw.get("vpn_type") or d.address_source == "vpn"):
                     devs.append(d)
         return {"interfaces": interfaces,
+                "source": active_source,
                 "public_ip": self.fetch_public_ip(),
                 "vpn": {"branches": vpn_branches,
                         "devices": [{"mac": d.mac, "ip": d.ip, "hostname": d.hostname,
