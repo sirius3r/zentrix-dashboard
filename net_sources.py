@@ -104,6 +104,7 @@ class OUILookup:
 class Device:
     mac: str | None = None
     ip: str | None = None
+    ip6: str | None = None
     hostname: str | None = None
     vendor: str | None = None
     active: bool | None = None
@@ -117,13 +118,25 @@ class Device:
     raw: dict | None = None
 
     @staticmethod
-    def from_raw(source_id: str, *, mac=None, ip=None, hostname=None, active=None,
+    def _norm_ip6(value):
+        import ipaddress as _ipa
+        if not value:
+            return None
+        v = str(value).strip().split("%")[0]   # zone-id abtrennen (fe80::1%igb1)
+        try:
+            return str(_ipa.IPv6Address(v))
+        except ValueError:
+            return None
+
+    @staticmethod
+    def from_raw(source_id: str, *, mac=None, ip=None, ip6=None, hostname=None, active=None,
                  address_source=None, lease_remaining_s=None, interface_type=None,
                  area_hint=None, raw=None) -> "Device":
         """Build + normalize (A5). Raises SourceError('format') when neither MAC nor IP."""
         d = Device(
             mac=norm_mac(mac),
             ip=norm_ip(ip),
+            ip6=Device._norm_ip6(ip6),
             hostname=norm_hostname(hostname),
             active=bool(active) if active is not None else None,
             address_source=(str(address_source).strip().lower() or None) if address_source else None,
@@ -161,6 +174,7 @@ FIELD_PRIORITY = [
     # field: (preferred capabilities in order, fallback = any source)
     ("active", ["CAP_ACTIVE_STATE", "CAP_ARP", "CAP_DHCP_LEASES", "CAP_MDNS"]),
     ("ip", ["CAP_DHCP_LEASES", "CAP_ARP", "CAP_MDNS"]),
+    ("ip6", ["CAP_ARP", "CAP_MDNS"]),   # NDP/IPv6 aus search_arp (ARP+NDP kombiniert)
     ("hostname", ["CAP_DHCP_LEASES", "CAP_ARP", "CAP_MDNS"]),
     ("interface_type", ["CAP_INTERFACE_TYPE", "CAP_ARP", "CAP_MDNS"]),
     ("address_source", ["CAP_DHCP_LEASES", "CAP_ARP"]),

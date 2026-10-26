@@ -192,7 +192,7 @@ class SourceRegistry:
         out = []
         for d in devices:
             out.append({
-                "mac": d.mac, "ip": d.ip, "hostname": d.hostname,
+                "mac": d.mac, "ip": d.ip, "ip6": d.ip6, "hostname": d.hostname,
                 "vendor": d.vendor, "active": d.active,
                 "address_source": d.address_source,
                 "lease_remaining_s": d.lease_remaining_s,

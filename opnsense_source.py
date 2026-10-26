@@ -123,8 +123,22 @@ class OpnSenseSource:
             arp, _ = self._request(c, "/api/diagnostics/interface/getArp", timeout=FETCH_TIMEOUT)
         devices = []
         rows = arp if isinstance(arp, list) else arp.get("rows", [])
-        for row in rows:
+        # IPv6 (NDP): search_arp liefert ARP+NDP kombiniert — IPv6-Zeilen haben ":" in
+        # der Adresse. Optionaler Fallback: search_ndp, falls die Version ARP/NDP getrennt hält.
+        ndp_rows = [r for r in rows if ":" in str(r.get("ip") or r.get("address") or "")]
+        if not ndp_rows:
             try:
+                ndp, _ = self._request(c, "/api/diagnostics/interface/search_ndp",
+                                       timeout=FETCH_TIMEOUT,
+                                       payload={"current": 1, "rowCount": -1, "sort": {}, "searchPhrase": ""})
+                ndp_rows = ndp if isinstance(ndp, list) else ndp.get("rows", [])
+            except SourceError:
+                pass  # NDP-Endpunkt optional (ältere Versionen)
+        for row in rows:
+            raw_ip = str(row.get("ip") or row.get("address") or "")
+            try:
+                if ":" in raw_ip:
+                    continue  # IPv6-Zeilen laufen unten als ip6-Sichtung
                 d = Device.from_raw(
                     self.source_id,
                     mac=row.get("mac"),
@@ -142,6 +156,26 @@ class OpnSenseSource:
                 devices.append(d)
             except SourceError:
                 continue  # skip malformed rows, don't fail the whole snapshot
+        # IPv6 (NDP) — eigene ip6-Sichtungen; der Merge (per MAC) hängt sie an das
+        # IPv4-Gerät, ohne das IPv4 zu überschreiben (FIELD_PRIORITY ip6 separat).
+        for row in ndp_rows:
+            try:
+                d = Device.from_raw(
+                    self.source_id,
+                    mac=row.get("mac"),
+                    ip6=row.get("ip") or row.get("address"),
+                    hostname=None,
+                    active=(True if (row.get("permanent") in ("1", 1, True)
+                                     or str(row.get("expires", "-1")) != "0") else None),
+                    interface_type=None,
+                    area_hint=row.get("intf_description") or row.get("intf"),
+                    raw={"mac": row.get("mac"), "ip6": row.get("ip") or row.get("address"),
+                         "ndp": True},
+                )
+                devices.append(d)
+            except SourceError:
+                continue
+
         # DHCP leases (CAP_DHCP_LEASES) — rich data: hostname, lease window,
         # vendor (router-side macdb), and the router's own online status.
         # inactive=1 includes expired leases so previously seen devices stay listed.
@@ -155,6 +189,14 @@ class OpnSenseSource:
             lease_rows = leases if isinstance(leases, list) else leases.get("rows", [])
         except SourceError:
             lease_rows = []
+        # ARP-Crosscheck-Map: MAC → online-Status aus der ARP-Tabelle
+        # (Skill-Regel: Lease state 0 = LEASE unexpired, NICHT reachable —
+        # eine Lease überlebt den Powered-off-Host um Stunden/Tage).
+        arp_active = {}
+        for d in devices:
+            if d.mac:
+                arp_active[d.mac] = d.active
+
         # Kea (aktiver DHCP-Server ab OPNsense 24.7) — IMMER abfragen und per
         # MAC deduplizieren (Kea gewinnt, da aktive Leases). Fängt Migrations-
         # und Dual-Setup-Fälle ab.
@@ -184,7 +226,9 @@ class OpnSenseSource:
                         "if_descr": rec.get("if_descr") or rec.get("if_name"),
                         "starts": None,
                         "ends": None,
-                        "binding": "active" if state == 0 else "free",
+                        # binding bleibt NEUTRAL: "lease" = Lease unexpired, aber das
+                        # heißt NICHT online — active kommt aus dem ARP-Crosscheck.
+                        "binding": "lease" if state == 0 else "free",
                     }
                     if rec.get("expire"):
                         try:
@@ -205,12 +249,18 @@ class OpnSenseSource:
                 if binding == "backup" or state == "backup" or not mac:
                     continue
                 hostname = (row.get("hostname") or "").strip() or None
-                # OPNsense already matched ARP: status = online|offline
+                # Activity: NUR der ARP-Crosscheck entscheidet über online/offline
+                # (Skill-Regel: Lease state 0 = unexpired, NICHT reachable —
+                # eine Lease überlebt den ausgeschalteten Host um Stunden).
+                # OPNsense liefert status=online|offline (serverseitiger ARP-Match)
+                # nur im ISC-Format; Kea-Mapping setzt binding="lease" (neutral).
                 status = str(row.get("status", "")).strip().lower()
                 if status in ("online", "offline"):
                     active = status == "online"
+                elif mac in arp_active:
+                    active = arp_active[mac]
                 else:
-                    active = binding == "active" or state in ("active", "online")
+                    active = None          # keine ARP-Quelle → unbekannt, NICHT online
                 # lease window → remaining seconds (if ends parseable)
                 lease_remaining_s = None
                 ends = row.get("ends")

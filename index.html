@@ -57,20 +57,21 @@ html[data-theme="deepspace"] {
   --accent: #7d8cff; --accent-dim: rgba(125, 140, 255, 0.14);
 }
 html[data-theme="glass"] {
-  /* Halbtransparent: frosted glass over photo backgrounds — scrims on topbar,
-     group heads, cards; background photo stays clearly visible */
-  --topbar-bg: rgba(10, 12, 15, 0.45);
-  --backdrop-bg: rgba(5, 7, 9, 0.55);
-  --bg-0: rgba(10, 12, 15, 0.38);
-  --bg-1: rgba(14, 17, 22, 0.42);
+  /* Frost v2 (Variante A, 10/2026): Gradient-Scrims + Hairlines + saturate —
+     Foto bleibt strukturiert erkennbar, Text lesbar. Werte aus dem freigegebenen
+     Mockup (zentrix-frost-v2-mockup.html, Vision-Loop-verifiziert). */
+  --topbar-bg: linear-gradient(180deg, rgba(8, 11, 14, 0.72), rgba(8, 11, 14, 0.55));
+  --backdrop-bg: rgba(5, 7, 9, 0.6);
+  --bg-0: rgba(10, 12, 15, 0.30);
+  --bg-1: linear-gradient(165deg, rgba(20, 25, 32, 0.44), rgba(13, 17, 22, 0.30));
   --bg-2: rgba(20, 24, 31, 0.46);
   --bg-3: rgba(28, 33, 42, 0.52);
-  --line: rgba(255, 255, 255, 0.14);
-  --line-strong: rgba(255, 255, 255, 0.24);
-  --ink-1: #f0f3f7; --ink-2: #c3ccd8; --ink-3: #8b97a8;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.18);
+  --ink-1: #f0f3f7; --ink-2: #c3ccd8; --ink-3: #93a0b1;
   --accent: #4ee1a0; --accent-dim: rgba(78, 225, 160, 0.12);
-  --head-plate: rgba(8, 10, 14, 0.45);
-  --head-plate-border: rgba(255, 255, 255, 0.16);
+  --head-plate: linear-gradient(180deg, rgba(10, 13, 16, 0.48), rgba(10, 13, 16, 0.30));
+  --head-plate-border: rgba(255, 255, 255, 0.10);
   --head-text: "";
 }
 html[data-theme="contrast"] {
@@ -233,12 +234,28 @@ body.edit-mode .group-actions { display: flex; }
 }
 /* ---------- theme "glass" (Halbtransparent): frosted elements over photo bg ---------- */
 html[data-theme="glass"] .card {
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: linear-gradient(165deg, rgba(20, 25, 32, 0.44), rgba(13, 17, 22, 0.30));
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 3px 18px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(8px) saturate(135%);
+  -webkit-backdrop-filter: blur(8px) saturate(135%);
+}
+html[data-theme="glass"] .card:hover {
+  border-color: rgba(78, 225, 160, 0.45);
 }
 html[data-theme="glass"] .group-head {
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: linear-gradient(180deg, rgba(10, 13, 16, 0.48), rgba(10, 13, 16, 0.30));
+  border-color: rgba(255, 255, 255, 0.10);
+  border-left: 2px solid var(--accent);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(9px) saturate(130%);
+  -webkit-backdrop-filter: blur(9px) saturate(130%);
+}
+html[data-theme="glass"] .topbar {
+  backdrop-filter: blur(14px) saturate(140%);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  border-bottom-color: rgba(78, 225, 160, 0.16);
 }
 html[data-theme="glass"] .search-input,
 html[data-theme="glass"] #search {
@@ -252,6 +269,16 @@ html[data-theme="glass"] body[data-bg="immich"] .group-head,
 html[data-theme="glass"] body[data-bg="custom"] .group-head {
   background: var(--head-plate);
   border-color: var(--head-plate-border);
+}
+html[data-theme="glass"] body[data-bg="immich"] .card .t,
+html[data-theme="glass"] body[data-bg="custom"] .card .t,
+html[data-theme="glass"] body[data-bg="immich"] .card,
+html[data-theme="glass"] body[data-bg="custom"] .card {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+html[data-theme="glass"] .group-head .g,
+html[data-theme="glass"] .group-head .n {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
 }
 .card:hover {
   border-color: var(--accent);
@@ -1130,6 +1157,6 @@ body.clock-hidden .topbar .clock ~ .sync-chip { margin-left: auto; }
 <script src="/bg.js?v=1100a" defer></script>
 <script src="/i18n.js?v=1100a" defer></script>
 <script src="/app.js?v=1100a" defer></script>
-<script src="/topology.js?v=1120a" defer></script>
+<script src="/topology.js?v=1120a-fix3" defer></script>
 </body>
 </html>

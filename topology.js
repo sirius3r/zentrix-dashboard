@@ -237,7 +237,7 @@
         : esc(titleName)) +
       (isVpn ? ` <span class="topo-vpn-tag">${esc((raw.vpn_type || "vpn").toUpperCase())}</span>` : "") +
       `</h4><button class="btn icon-btn" id="topo-detail-close" title="${esc(t("topo_close", "Schließen"))}">✕</button></div>` +
-      `<div class="kv">` + kv.map(([k, v]) => `<span>${esc(k)}</span><b>${esc(v)}</b>`).join("") + `</div></div>`;
+      `<div class="kv">` + kv.filter(Boolean).map(([k, v]) => `<span>${esc(k)}</span><b>${esc(v)}</b>`).join("") + `</div></div>`;
     DETAIL.style.display = "flex";
     const c = document.getElementById("topo-detail-close");
     if (c) c.addEventListener("click", closeDetail);

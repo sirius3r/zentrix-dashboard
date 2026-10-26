@@ -12,3 +12,7 @@ node_modules/
 # local production data (NEVER commit real links)
 links-prod.json
 prod-backup/
+
+# local credentials (sources.json holds OPNsense API key/secret)
+sources.json
+sources.*.json
